@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EHS 工业安全管理平台</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card-bg: #fff; --text: #1a1a2e; --text-secondary: #6b7280; --text-muted: #9ca3af;
+      --border: #e5e7eb; --border-light: #f0f0f0;
+      --alert-orange: #f97316; --alert-orange-dim: rgba(249,115,22,.08);
+      --safety-green: #16a34a; --safety-green-dim: rgba(22,163,74,.08);
+      --danger-red: #dc2626; --danger-red-dim: rgba(220,38,38,.08);
+      --electric-blue: #3b82f6; --electric-blue-dim: rgba(59,130,246,.08);
+      --purple: #7c3aed; --purple-dim: rgba(124,58,237,.08);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans SC',-apple-system,sans-serif; background: var(--bg); min-height: 100vh; color: var(--text-secondary); }
+    .status-bar { background: var(--card-bg); border-bottom: 1px solid var(--border); padding: 6px 32px; display: flex; justify-content: space-between; align-items: center; font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-muted); letter-spacing: .5px; }
+    .status-bar .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--safety-green); box-shadow: 0 0 8px var(--safety-green); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:.4 } }
+    .header { text-align: center; padding: 40px 20px 28px; }
+    .header .system-id { font-family: 'JetBrains Mono',monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+    .header h1 { font-family: 'JetBrains Mono',monospace; font-size: 34px; font-weight: 700; color: var(--text); margin-bottom: 8px; letter-spacing: 2px; }
+    .header h1 span { color: var(--alert-orange); }
+    .header p { font-size: 14px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.7; }
+    .divider { width: 120px; height: 2px; background: linear-gradient(90deg,transparent,var(--alert-orange),transparent); margin: 0 auto 32px; }
+
+    .modules { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; max-width: 1200px; margin: 0 auto; padding: 0 24px 36px; }
+    .module-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--text-secondary); transition: all .25s; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .module-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-color); opacity: .8; }
+    .module-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.1); border-color: var(--accent-color); }
+    .module-card.loto{--accent-color:var(--alert-orange)}.module-card.shield{--accent-color:var(--danger-red)}.module-card.hazard{--accent-color:var(--safety-green)}.module-card.incident{--accent-color:var(--electric-blue)}.module-card.docs{--accent-color:var(--purple)}
+    .module-header { padding: 16px 16px 10px; display: flex; align-items: flex-start; gap: 10px; }
+    .module-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .module-card.loto .module-icon{background:var(--alert-orange-dim)}.module-card.shield .module-icon{background:var(--danger-red-dim)}.module-card.hazard .module-icon{background:var(--safety-green-dim)}.module-card.incident .module-icon{background:var(--electric-blue-dim)}.module-card.docs .module-icon{background:var(--purple-dim)}
+    .module-icon svg{width:18px;height:18px;stroke:var(--accent-color);stroke-width:1.8;fill:none}
+    .module-title h2{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+    .module-title .en{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+    .module-body{padding:0 16px 14px;font-size:11px;line-height:1.6;color:var(--text-secondary)}
+    .module-footer{padding:8px 16px;background:#f9fafb;border-top:1px solid var(--border-light);border-radius:0 0 8px 8px;display:flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-color)}
+    .module-footer .arrow{margin-left:auto;transition:transform .2s}
+    .module-card:hover .arrow{transform:translateX(4px)}
+
+    /* 看板 */
+    .dashboard { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
+    .dashboard-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .dashboard-title::before { content: ''; width: 4px; height: 18px; background: var(--alert-orange); border-radius: 2px; }
+    .stat-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; transition: all .2s; }
+    .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+    .stat-card .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .stat-card .card-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .stat-card select { font-size: 11px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; background: #f9fafb; color: var(--text-secondary); }
+    .stat-card .num { font-size: 36px; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .stat-card .sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+    .stat-card .sub span { font-weight: 600; }
+    .stat-card.accent-orange .num{color:var(--alert-orange)}.stat-card.accent-red .num{color:var(--danger-red)}.stat-card.accent-green .num{color:var(--safety-green)}.stat-card.accent-blue .num{color:var(--electric-blue)}
+
+    /* 图表 */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+    .chart-box h4 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .chart-box select { font-size: 11px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 4px; }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+    /* 安全员排班 */
+    .safety-officer-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; }
+    .so-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .so-date { font-size: 13px; font-weight: 700; color: var(--text); }
+    .so-btn { padding: 5px 16px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; font-family: inherit; transition: all .2s; font-weight: 600; }
+    .so-btn-primary { background: var(--alert-orange); color: #fff; }
+    .so-btn-primary:hover { opacity: .85; }
+    .so-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .so-btn-sm { padding: 2px 8px; font-size: 10px; border: none; border-radius: 3px; cursor: pointer; font-family: inherit; transition: all .15s; white-space: nowrap; }
+    .so-btn-add { background: var(--safety-green-dim); color: var(--safety-green); }
+    .so-btn-add:hover { background: var(--safety-green); color: #fff; }
+    .so-btn-del { background: var(--danger-red-dim); color: var(--danger-red); }
+    .so-btn-del:hover { background: var(--danger-red); color: #fff; }
+    .so-shifts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    @media(max-width:768px){.so-shifts{grid-template-columns:1fr}}
+    .so-shift-box { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .so-shift-header { padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--text); background: #f9fafb; border-bottom: 1px solid var(--border); }
+    .so-site-row { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-bottom: 1px solid var(--border-light); flex-wrap: wrap; }
+    .so-site-row:last-child { border-bottom: none; }
+    .so-site-input { border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 12px; font-family: inherit; width: 120px; background: #fafafa; transition: border-color .2s; }
+    .so-site-input:focus { outline: none; border-color: var(--alert-orange); background: #fff; }
+    .so-officer-tag { display: inline-flex; align-items: center; gap: 2px; background: var(--electric-blue-dim); color: var(--electric-blue); padding: 1px 6px 1px 8px; border-radius: 3px; font-size: 11px; }
+    .so-officer-tag input { width: 48px; border: none; background: transparent; font-size: 11px; font-family: inherit; color: var(--electric-blue); outline: none; padding: 0; }
+    .so-officer-tag input:focus { outline: 1px solid var(--electric-blue); border-radius: 2px; }
+    .so-officer-tag .officer-del { background: none; border: none; color: var(--danger-red); cursor: pointer; font-size: 12px; line-height: 1; padding: 0 1px; opacity: .6; }
+    .so-officer-tag .officer-del:hover { opacity: 1; }
+    .so-add-row { padding: 8px 14px; }
+    .toast { position: fixed; top: 20px; right: 20px; padding: 10px 20px; border-radius: 6px; font-size: 13px; z-index: 999; pointer-events: none; animation: toastAnim 2.2s ease forwards; }
+    .toast-success { background: var(--safety-green); color: #fff; }
+    .toast-error { background: var(--danger-red); color: #fff; }
+    @keyframes toastAnim { 0%{opacity:0;transform:translateY(-12px)} 12%{opacity:1;transform:translateY(0)} 80%{opacity:1} 100%{opacity:0;transform:translateY(-12px)} }
+
+    .footer { text-align: center; padding: 24px; color: var(--text-muted); font-size: 11px; font-family: 'JetBrains Mono',monospace; letter-spacing: 1px; border-top: 1px solid var(--border); }
+
+    @media(max-width:1100px){.modules{grid-template-columns:repeat(3,1fr)}.charts-row{grid-template-columns:1fr}}
+    @media(max-width:768px){.header h1{font-size:26px}.modules{grid-template-columns:repeat(2,1fr)}.stat-cards{grid-template-columns:1fr}}
+    @media(max-width:480px){.modules{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="status-bar">
+    <div><span class="dot" style="display:inline-block;vertical-align:middle;margin-right:6px"></span> SYSTEM ONLINE</div>
+    <div>EHS-INDUSTRIAL-v1.0.0</div>
+  </div>
+  <div class="header">
+    <div class="system-id">Industrial Safety Management System</div>
+    <h1>EHS 安全管理平台</h1>
+    <p>LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录</p>
+  </div>
+  <div class="divider"></div>
+
+  <div class="modules">
+    <a href="/loto/" class="module-card loto"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 11h6M9 15h6"/></svg></div><div class="module-title"><h2>LOTO 锁定管理</h2><div class="en">Lockout / Tagout</div></div></div><div class="module-body">设备上锁挂牌管理，支持多场地拓扑可视化与联动分析。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
+    <a href="/shield/" class="module-card shield"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="module-title"><h2>安全联锁屏蔽</h2><div class="en">Safety Shield</div></div></div><div class="module-body">屏蔽作业管理，支持申请审批、冲突检测、台账追踪。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
+    <a href="/hazard/" class="module-card hazard"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-6 3 4 4-6"/></svg></div><div class="module-title"><h2>隐患风险管控</h2><div class="en">Hazard Control</div></div></div><div class="module-body">隐患全生命周期管理，风险分级、整改闭环、BI 分析。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
+    <a href="/incident/" class="module-card incident"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div><div class="module-title"><h2>异常事件记录</h2><div class="en">Incident</div></div></div><div class="module-body">异常事件记录与复盘，支持事件分级、报告上传、BI 分析。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
+    <a href="http://10.29.113.101:8090/files" class="module-card docs" target="_blank"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div><div class="module-title"><h2>EHS 公档</h2><div class="en">Documents</div></div></div><div class="module-body">公共文档资料库，文件上传下载、在线预览、共享协作。</div><div class="module-footer">打开文档库 <span class="arrow">&rarr;</span></div></a>
+  </div>
+
+  <div class="dashboard">
+    <div class="dashboard-title">数据看板</div>
+    <div class="stat-cards">
+      <div class="stat-card accent-orange">
+        <div class="card-top"><span class="card-label">LOTO 已上锁</span><select id="s-loto-site" onchange="loadLoto()"><option value="">全部场地</option></select></div>
+        <div class="num" id="s-loto">-</div>
+        <div class="sub">个设备已上锁</div>
+      </div>
+      <div class="stat-card accent-red">
+        <div class="card-top"><span class="card-label">安全联锁屏蔽</span><select id="s-shield-ver" onchange="loadShield()"><option value="">全部版本</option></select></div>
+        <div class="num" id="s-shield">-</div>
+        <div class="sub">个屏蔽项 Active<span id="s-shield-overdue-wrap"> · 超时未解除 <span id="s-shield-overdue" style="color:var(--danger-red);font-weight:700">-</span></span></div>
+      </div>
+      <div class="stat-card accent-green">
+        <div class="card-top"><span class="card-label">隐患统计</span></div>
+        <div class="num" id="s-hazard-total">-</div>
+        <div class="sub">闭环率 <span id="s-hazard-rate" style="color:var(--safety-green)">-</span></div>
+      </div>
+      <div class="stat-card accent-blue">
+        <div class="card-top"><span class="card-label">异常事件统计</span></div>
+        <div class="num" id="s-incident-total">-</div>
+        <div class="sub">复盘率 <span id="s-incident-rate" style="color:var(--electric-blue)">-</span></div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-box">
+        <h4>隐患趋势 <select onchange="loadHazardTrend()"><option value="day">按天</option><option value="week">按周</option><option value="month">按月</option></select></h4>
+        <div class="chart-wrap"><canvas id="chart-hazard-trend"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4>异常事件趋势 <select onchange="loadIncidentTrend()"><option value="day">按天</option><option value="week">按周</option><option value="month">按月</option></select></h4>
+        <div class="chart-wrap"><canvas id="chart-incident-trend"></canvas></div>
+      </div>
+    </div>
+
+    <div class="dashboard-title">今日安全员排班</div>
+    <div id="so-container"></div>
+  </div>
+
+  <div class="footer">EHS INDUSTRIAL PLATFORM &copy; 2026</div>
+
+  <script>
+  const COLORS = { open: '#f97316', closed: '#16a34a', '挂起': '#f59e0b' };
+  const hTrend = { inst: null, i: 0 };
+  const iTrend = { inst: null, i: 0 };
+
+  async function fetchJson(url) {
+    const opts = {};
+    const token = localStorage.getItem('token');
+    if (token) opts.headers = { 'Authorization': '***' + token };
+    const r = await fetch(url, opts);
+    if (!r.ok) throw new Error(r.status);
+    return r.json();
+  }
+
+  async function loadLoto() {
+    try {
+      const site = document.getElementById('s-loto-site').value;
+      const data = await fetchJson('/api/loto/export?site=' + (site || '001'));
+      let count = 0;
+      for (const dv of Object.values(data.devices||{})) dv.forEach(d => { if (d.isLocked) count++; });
+      document.getElementById('s-loto').textContent = count;
+      // 填充场地列表
+      try {
+        const sites = await fetchJson('/api/loto/sites');
+        const sel = document.getElementById('s-loto-site');
+        if (sel.options.length <= 1) {
+          sites.forEach(s => { if (s.id !== '001') sel.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
+        }
+      } catch(e) {}
+    } catch(e) {}
+  }
+
+  async function loadShield() {
+    try {
+      const ver = document.getElementById('s-shield-ver').value;
+      const [apps, stats] = await Promise.all([
+        fetchJson('/api/shield/applications'),
+        fetchJson('/api/shield/stats' + (ver ? '?version=' + encodeURIComponent(ver) : ''))
+      ]);
+      const active = apps.filter(a => a.status === 'active' && (!ver || a.version===ver));
+      document.getElementById('s-shield').textContent = active.reduce((s,a) => s + (a.active_items||0), 0);
+      document.getElementById('s-shield-overdue').textContent = stats.totalOverdue || 0;
+      // 自动刷新版本列表
+      const sel = document.getElementById('s-shield-ver');
+      const curVal = sel.value;
+      sel.innerHTML = '<option value="">全部版本</option>';
+      const vers = new Set(apps.map(a => a.version).filter(Boolean));
+      vers.forEach(v => { sel.innerHTML += `<option value="${v}">${v}</option>`; });
+      sel.value = curVal;
+    } catch(e) {}
+  }
+
+  function simpleLine(canvasId, labels, data, color, ref) {
+    if (ref.inst) ref.inst.destroy();
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    ref.inst = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [{ label: '数量', data, borderColor: color, backgroundColor: color + '22', fill: true, tension: .3, pointRadius: 2 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { maxTicksLimit: 10, font: { size: 10 } } } }
+      }
+    });
+  }
+
+  async function loadHazardTrend() {
+    try {
+      const dens = document.querySelectorAll('.chart-box select')[0].value;
+      const d = await fetchJson(`/api/hazard/stats/trend?group_by=report_date&days=60&density=${dens}`);
+      simpleLine('chart-hazard-trend', d.labels||[], d.values||[], '#f97316', hTrend);
+    } catch(e) {}
+  }
+
+  async function loadIncidentTrend() {
+    try {
+      const dens = document.querySelectorAll('.chart-box select')[1].value;
+      const d = await fetchJson(`/api/incident/stats/trend?days=60&density=${dens}`);
+      simpleLine('chart-incident-trend', d.labels||[], d.values||[], '#3b82f6', iTrend);
+    } catch(e) {}
+  }
+
+  // ─── 安全员排班 ─────────────────────────────────────────
+  let scheduleData = null;
+
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function updateSite(shiftIdx, siteIdx, field, value) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    if (!scheduleData[key]) scheduleData[key] = { sites: [] };
+    if (!scheduleData[key].sites[siteIdx]) scheduleData[key].sites[siteIdx] = { name: '', officers: [], phone: '' };
+    scheduleData[key].sites[siteIdx][field] = value;
+  }
+
+  function updateOfficer(shiftIdx, siteIdx, oi, value) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    if (scheduleData[key]?.sites[siteIdx]?.officers) scheduleData[key].sites[siteIdx].officers[oi] = value;
+  }
+
+  function addSite(shiftIdx) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    if (!scheduleData[key]) scheduleData[key] = { sites: [] };
+    scheduleData[key].sites.push({ name: '', officers: [], phone: '' });
+    renderSchedule(scheduleData);
+  }
+
+  function removeSite(shiftIdx, siteIdx) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    scheduleData[key].sites.splice(siteIdx, 1);
+    renderSchedule(scheduleData);
+  }
+
+  function addOfficer(shiftIdx, siteIdx) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    if (!scheduleData[key]?.sites[siteIdx]?.officers) return;
+    scheduleData[key].sites[siteIdx].officers.push('');
+    renderSchedule(scheduleData);
+  }
+
+  function removeOfficer(shiftIdx, siteIdx, oi) {
+    const key = shiftIdx === 0 ? 'dayShift' : 'nightShift';
+    scheduleData[key].sites[siteIdx].officers.splice(oi, 1);
+    renderSchedule(scheduleData);
+  }
+
+  function showToast(msg, type) {
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
+  function renderSchedule(data) {
+    const el = document.getElementById('so-container');
+    const today = new Date().toISOString().slice(0, 10);
+    let html = '<div class="safety-officer-card"><div class="so-header"><span class="so-date">' + today + '</span><button class="so-btn so-btn-primary" onclick="saveSchedule()">保存</button></div><div class="so-shifts">';
+    const shifts = [
+      { key: 'dayShift', label: '白班', idx: 0 },
+      { key: 'nightShift', label: '夜班', idx: 1 }
+    ];
+    for (const sh of shifts) {
+      const sites = data[sh.key]?.sites || [];
+      html += '<div class="so-shift-box"><div class="so-shift-header">' + sh.label + '</div>';
+      for (let si = 0; si < sites.length; si++) {
+        const site = sites[si];
+        const siteName = escHtml(site.name || '');
+        const sitePhone = escHtml(site.phone || '');
+        const officers = site.officers || [];
+        html += '<div class="so-site-row"><input class="so-site-input" value="' + siteName + '" placeholder="场地名称" onchange="updateSite(' + sh.idx + ',' + si + ',\'name\',this.value)">';
+        html += '<input class="so-site-input" value="' + sitePhone + '" placeholder="值班电话" style="width:130px" onchange="updateSite(' + sh.idx + ',' + si + ',\'phone\',this.value)">';
+        html += '<span style="font-size:11px;color:var(--text-muted)">安全员：</span>';
+        for (let oi = 0; oi < officers.length; oi++) {
+          const oname = escHtml(officers[oi] || '');
+          html += '<span class="so-officer-tag"><input value="' + oname + '" placeholder="姓名" onchange="updateOfficer(' + sh.idx + ',' + si + ',' + oi + ',this.value)"><button class="officer-del" onclick="removeOfficer(' + sh.idx + ',' + si + ',' + oi + ')">×</button></span>';
+        }
+        html += '<button class="so-btn-sm so-btn-add" onclick="addOfficer(' + sh.idx + ',' + si + ')">+添加</button>';
+        html += '<button class="so-btn-sm so-btn-del" onclick="removeSite(' + sh.idx + ',' + si + ')" style="margin-left:auto">删除场地</button>';
+        html += '</div>';
+      }
+      html += '<div class="so-add-row"><button class="so-btn-sm so-btn-add" onclick="addSite(' + sh.idx + ')">+ 添加场地</button></div></div>';
+    }
+    html += '</div></div>';
+    el.innerHTML = html;
+  }
+
+  async function loadSchedule() {
+    try {
+      const data = await fetchJson('/api/safety-officer');
+      scheduleData = data;
+      renderSchedule(data);
+    } catch(e) {}
+  }
+
+  async function saveSchedule() {
+    const btn = document.querySelector('.so-btn-primary');
+    btn.textContent = '保存中...';
+    btn.disabled = true;
+    try {
+      await fetch('/api/safety-officer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scheduleData)
+      });
+      showToast('保存成功 ✅', 'success');
+    } catch(e) {
+      showToast('保存失败 ❌', 'error');
+    } finally {
+      btn.textContent = '保存';
+      btn.disabled = false;
+    }
+  }
+
+  async function loadDashboard() {
+    loadLoto(); loadShield(); loadSchedule();
+    try {
+      const s = await fetchJson('/api/hazard/stats/summary');
+      document.getElementById('s-hazard-total').textContent = s.total || 0;
+      document.getElementById('s-hazard-rate').textContent = (s.closeRate != null ? s.closeRate + '%' : '-');
+      loadHazardTrend();
+    } catch(e) {}
+    try {
+      const s = await fetchJson('/api/incident/stats/summary');
+      const total = s.total || 0;
+      const reviewed = (s.by_status||{})['已复盘'] || s.with_report || 0;
+      document.getElementById('s-incident-total').textContent = total;
+      document.getElementById('s-incident-rate').textContent = total > 0 ? Math.round(reviewed/total*100) + '%' : '-';
+      loadIncidentTrend();
+    } catch(e) {}
+  }
+
+  loadDashboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EHS 隐患风险管理平台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+/* ── 设计系统 ── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+ /* 背景层级 */
+ --bg:#f1f5f9;--card:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--divider:#f1f5f9;
+ --text:#0f172a;--text-primary:#1e293b;--text-secondary:#64748b;--text-tertiary:#94a3b8;
+ /* 主色 - 更沉稳的靛蓝 */
+ --primary:#1d4ed8;--primary-light:#3b82f6;--primary-bg:#eff6ff;--primary-border:#bfdbfe;
+ --primary-hover:#1e40af;
+ /* 语义色 */
+ --danger:#dc2626;--danger-bg:#fef2f2;--success:#059669;--success-bg:#f0fdf4;
+ --warn:#b45309;--warn-bg:#fffbeb;--info:#0e7490;--info-bg:#ecfeff;
+ --purple:#7c3aed;--pink:#db2777;--teal:#0d9488;
+ /* 阴影 - 更柔和自然 */
+ --shadow-sm:0 1px 2px 0 rgba(15,23,42,.04),0 1px 3px 0 rgba(15,23,42,.02);
+ --shadow:0 1px 3px 0 rgba(15,23,42,.06),0 1px 2px -1px rgba(15,23,42,.04);
+ --shadow-md:0 4px 8px -2px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.03);
+ --shadow-lg:0 12px 20px -4px rgba(15,23,42,.1),0 4px 8px -4px rgba(15,23,42,.04);
+ --shadow-xl:0 20px 32px -8px rgba(15,23,42,.12);
+ /* 圆角 */
+ --radius:16px;--radius-md:12px;--radius-sm:10px;--radius-xs:8px;--radius-pill:999px;
+ /* 尺寸 */
+ --header-h:64px;--tabs-h:52px;
+ /* 动效曲线 */
+ --ease-out:cubic-bezier(0.16,1,0.3,1);
+ --ease-in-out:cubic-bezier(0.65,0,0.35,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:"Inter","PingFang SC","Microsoft YaHei",-apple-system,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-0.01em}
+
+/* ── Header ── */
+header{
+ background:linear-gradient(135deg,#0f172a,#1e3a5f 40%,#1e1b4b);
+ color:#fff;padding:0 32px;height:var(--header-h);display:flex;
+ justify-content:space-between;align-items:center;
+ box-shadow:0 4px 20px rgba(15,23,42,.25);position:sticky;top:0;z-index:50
+}
+header h1{font-size:18px;font-weight:700;letter-spacing:.4px;display:flex;align-items:center;gap:12px}
+header h1 .icon{
+ width:36px;height:36px;background:rgba(255,255,255,.1);border-radius:var(--radius-sm);
+ display:flex;align-items:center;justify-content:center;font-size:20px;
+ border:1px solid rgba(255,255,255,.12);box-shadow:0 2px 8px rgba(0,0,0,.1)
+}
+.header-actions{display:flex;gap:10px}
+.header-btn{
+ padding:7px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+ color:#fff;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-weight:500;
+ transition:all .2s var(--ease-out);white-space:nowrap;display:flex;align-items:center;gap:6px;
+ backdrop-filter:blur(4px);letter-spacing:.2px
+}
+.header-btn:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.header-btn:active{transform:translateY(0) scale(.97)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:var(--tabs-h);position:sticky;top:var(--header-h);z-index:49}
+.tab{
+ padding:0 24px;height:100%;cursor:pointer;font-size:14px;color:var(--text-secondary);
+ border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;
+ transition:all .25s var(--ease-out);position:relative;user-select:none;font-weight:500
+}
+.tab:hover{color:var(--text);background:#f8fafc}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tab .badge-count{background:var(--primary-bg);color:var(--primary);font-size:11px;padding:2px 8px;border-radius:var(--radius-pill);font-weight:600;transition:all .2s}
+.tab:hover .badge-count{transform:scale(1.05)}
+
+/* ── Layout ── */
+.container{max-width:98vw;margin:0 auto;padding:28px 32px}
+.section-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em}
+
+/* ── Card ── */
+.card{
+ background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+ border:1px solid var(--border);overflow:hidden;transition:box-shadow .3s var(--ease-out)
+}
+.card:hover{box-shadow:var(--shadow-md)}
+.card-body{padding:24px}
+.card-header{padding:18px 24px;border-bottom:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-0.01em}
+
+/* ── Controls Bar ── */
+.controls-bar{
+ display:flex;gap:10px;align-items:center;padding:16px 20px;
+ flex-wrap:wrap;background:#fff;border-radius:var(--radius-md);
+ box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:20px;
+ transition:box-shadow .3s var(--ease-out)
+}
+.controls-bar:hover{box-shadow:var(--shadow)}
+.controls-bar .filter-group{display:flex;align-items:center;gap:6px}
+.controls-bar label{font-size:12px;color:var(--text-secondary);white-space:nowrap;font-weight:500}
+.filter-select,.filter-input{
+ padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);
+ font-size:13px;background:var(--surface);color:var(--text);
+ transition:all .2s var(--ease-out);font-family:inherit;min-width:0
+}
+.filter-select:focus,.filter-input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff}
+.list-count{font-size:12px;color:var(--text-secondary);margin-left:auto;white-space:nowrap;font-weight:500}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--border);box-shadow:var(--shadow-sm);background:#fff}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff}
+th,td{padding:12px 16px;text-align:left;font-size:13px;border-bottom:1px solid var(--divider)}
+th{background:linear-gradient(180deg,#f8fafc,#f1f5f9);color:var(--text-secondary);font-weight:600;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;border-bottom:1px solid var(--border)}
+th:first-child{border-top-left-radius:var(--radius-md)}
+th:last-child{border-top-right-radius:var(--radius-md)}
+tr:last-child td{border-bottom:none}
+tr:last-child td:first-child{border-bottom-left-radius:var(--radius-md)}
+tr:last-child td:last-child{border-bottom-right-radius:var(--radius-md)}
+tr{transition:background .15s var(--ease-out)}
+tr:hover td{background:#f1f5f9}
+tr.row-closed td{opacity:.5}
+td a{color:var(--primary);text-decoration:none;font-weight:500;transition:opacity .15s}
+td a:hover{opacity:.75}
+td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)}
+
+/* ── Badge ── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;gap:5px;white-space:nowrap;letter-spacing:.2px;border:1px solid transparent;transition:transform .15s var(--ease-out)}
+.badge:hover{transform:scale(1.03)}
+.badge-open{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.badge-closed{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+.badge-hang{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.badge-high{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.badge-mid{background:#fef3c7;color:#92400e;border-color:#fde68a}
+.badge-low{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+
+/* ── Form ── */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.form-grid .span-2{grid-column:span 2}
+.form-grid .span-3{grid-column:span 3}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.2px}
+.form-group.required label::after{content:" *";color:var(--danger)}
+.form-group input,.form-group select,.form-group textarea{
+ padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);
+ font-size:13px;font-family:inherit;transition:all .2s var(--ease-out);background:var(--surface);color:var(--text);box-shadow:inset 0 1px 2px rgba(15,23,42,.03)
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+ outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.1),inset 0 1px 2px transparent;background:#fff
+}
+.form-group textarea{resize:vertical;min-height:64px;line-height:1.5}
+.form-group input[readonly]{background:#f1f5f9;color:var(--text-secondary);cursor:not-allowed;border-style:dashed}
+.form-actions{display:flex;gap:12px;justify-content:flex-end;padding:24px 0 4px}
+
+/* ── Buttons ── */
+.btn{
+ display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border:none;
+ border-radius:var(--radius-xs);font-size:13px;cursor:pointer;font-weight:600;
+ transition:all .2s var(--ease-out);white-space:nowrap;justify-content:center;line-height:1.4;
+ text-decoration:none;letter-spacing:.2px;position:relative;overflow:hidden
+}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .2s}
+.btn:hover::after{background:rgba(255,255,255,.08)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-hover));color:#fff;box-shadow:0 2px 8px rgba(29,78,216,.2)}
+.btn-primary:hover{box-shadow:0 4px 14px rgba(29,78,216,.3);transform:translateY(-1px)}
+.btn-success{background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.2)}
+.btn-success:hover{box-shadow:0 4px 14px rgba(5,150,105,.3);transform:translateY(-1px)}
+.btn-outline{background:#fff;border:1px solid var(--border);color:var(--text-primary)}
+.btn-outline:hover{background:var(--surface);border-color:#cbd5e1;box-shadow:var(--shadow-sm)}
+.btn-danger{background:linear-gradient(135deg,var(--danger),#b91c1c);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.2)}
+.btn-danger:hover{box-shadow:0 4px 14px rgba(220,38,38,.3);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:none;padding:6px 10px}
+.btn-ghost:hover{background:var(--bg);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-xs{padding:4px 10px;font-size:11px;border-radius:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none !important;box-shadow:none !important}
+.btn:disabled::after{display:none}
+
+/* ── Pagination ── */
+.pagination{display:flex;gap:8px;justify-content:center;align-items:center;padding:20px 0;font-size:13px;color:var(--text-secondary);font-weight:500}
+
+/* ── Dialog ── */
+.dialog-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);animation:fadeIn .2s var(--ease-out)}
+.dialog{background:#fff;border-radius:var(--radius);padding:32px;width:92%;max-width:720px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-xl);animation:slideUp .25s var(--ease-out);border:1px solid var(--border)}
+.dialog h3{font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:-0.01em}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── Options Manager ── */
+.opt-section{margin-bottom:24px}
+.opt-section h4{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-secondary);letter-spacing:.2px}
+.opt-tags{display:flex;flex-wrap:wrap;gap:8px}
+.opt-tag{
+ display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+ background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);
+ font-size:12px;transition:all .2s var(--ease-out);font-weight:500
+}
+.opt-tag:hover{border-color:var(--primary-border);background:var(--primary-bg)}
+.opt-tag .del{
+ cursor:pointer;color:var(--text-tertiary);font-weight:bold;margin-left:2px;
+ width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+ border-radius:50%;font-size:11px;transition:all .15s
+}
+.opt-tag .del:hover{background:var(--danger-bg);color:var(--danger)}
+.opt-add{display:flex;gap:8px;margin-top:14px}
+
+/* ── BI 分析 ── */
+.bi-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;margin-bottom:28px}
+.bi-stat-card{
+ background:#fff;border-radius:var(--radius);padding:24px 20px;text-align:center;
+ box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden;
+ transition:all .3s var(--ease-out)
+}
+.bi-stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.bi-stat-card .stat-icon{
+ width:44px;height:44px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
+ margin:0 auto 12px;font-size:22px
+}
+.bi-stat-card .num{font-size:32px;font-weight:800;line-height:1.2;letter-spacing:-0.03em}
+.bi-stat-card .lbl{font-size:12px;color:var(--text-secondary);margin-top:6px;font-weight:500}
+
+.bi-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;padding:12px 0}
+.bi-controls label{font-size:12px;color:var(--text-secondary);font-weight:600}
+.bi-controls-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bi-control-group{display:flex;align-items:center;gap:5px}
+.bi-control-group label{font-size:11px;color:var(--text-secondary);font-weight:500;white-space:nowrap}
+.bi-control-group select{font-size:11px;padding:5px 8px}
+
+/* 图表容器 */
+.chart-card{
+ background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+ border:1px solid var(--border);margin-bottom:20px;
+ transition:box-shadow .3s var(--ease-out)
+}
+.chart-card:hover{box-shadow:var(--shadow-md)}
+.chart-card .chart-header{padding:18px 24px 0;display:flex;justify-content:space-between;align-items:center}
+.chart-card .chart-header h3{font-size:13px;font-weight:600;color:var(--text-secondary);letter-spacing:.2px}
+.chart-wrap{position:relative;width:100%;padding:16px 24px 24px}
+.chart-wrap.aspect-3-1{aspect-ratio:3/1}
+.chart-wrap.aspect-2-1{aspect-ratio:2/1}
+.chart-wrap.aspect-1-1{aspect-ratio:1/1}
+.chart-wrap canvas{width:100% !important;height:100% !important}
+
+/* 自定义图表网格 */
+#bi-custom-charts{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:0}
+#bi-custom-charts .custom-chart-item{
+ padding:20px;background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);
+ position:relative;transition:box-shadow .3s var(--ease-out)
+}
+#bi-custom-charts .custom-chart-item:hover{box-shadow:var(--shadow-md)}
+#bi-custom-charts .custom-chart-item .chart-toolbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+#bi-custom-charts .custom-chart-item .chart-toolbar select{flex:1;min-width:80px}
+#bi-custom-charts .custom-chart-item .chart-wrap{padding:0;aspect-ratio:16/9}
+
+/* ── Utility ── */
+.hidden{display:none !important}
+.empty-state{text-align:center;padding:56px 20px;color:var(--text-secondary)}
+.empty-state .icon{font-size:52px;margin-bottom:16px;opacity:.35}
+.empty-state p{font-size:14px;font-weight:500}
+
+/* ── Animations ── */
+@keyframes pulse-soft{0%,100%{opacity:1}50%{opacity:.7}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+/* ── Responsive ── */
+@media(max-width:1024px){
+ .bi-summary{grid-template-columns:repeat(2,1fr)}
+ #bi-custom-charts{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+ .container{padding:16px}
+ .form-grid{grid-template-columns:1fr}
+ .form-grid .span-2,.form-grid .span-3{grid-column:span 1}
+ .controls-bar .filter-group{flex:1 1 calc(50% - 8px)}
+ .chart-wrap.aspect-3-1{aspect-ratio:16/9}
+ .chart-wrap.aspect-2-1{aspect-ratio:16/9}
+ .bi-summary{grid-template-columns:repeat(2,1fr);gap:12px}
+ #bi-custom-charts{grid-template-columns:1fr}
+ header{padding:0 16px}
+ .tabs{padding:0 16px}
+ .header-actions{gap:6px}
+ .header-btn{padding:6px 10px;font-size:11px}
+ .dialog{padding:24px;width:95%;border-radius:var(--radius-md)}
+}
+</style>
+</head>
+<body>
+
+<header>
+ <div style="display:flex;align-items:center;gap:10px">
+ <a href="/" style="color:var(--text-muted);text-decoration:none;opacity:0.5;transition:opacity .2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5" title="返回首页"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
+ <h1> EHS 隐患风险管理平台</h1>
+ </div>
+ <div class="header-actions" id="header-actions-admin" style="margin-left:auto">
+ <button class="header-btn" onclick="document.getElementById('import-file').click()">导入Excel</button>
+ <button class="header-btn" onclick="exportExcel()">导出Excel</button>
+ <input type="file" id="import-file" accept=".xlsx" onchange="importExcel(this)" style="display:none">
+ <button class="header-btn" onclick="downloadTemplate()">下载模板</button>
+ <button class="header-btn" onclick="openOptionsManager()">选项管理</button>
+ <button class="header-btn" onclick="openUserManager()" id="btn-user-manager">用户管理</button>
+ </div>
+ <div class="header-actions" id="header-user" style="display:flex;align-items:center;gap:12px">
+ <span id="user-name" style="font-size:13px;font-weight:500;opacity:.9"></span>
+ <button class="header-btn" onclick="logout()" title="退出登录">🚪 退出</button>
+ </div>
+</header>
+
+<!-- ════════════════ 登录视图 ════════════════ -->
+<div id="view-login" class="hidden" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e3a5f 40%,#1e1b4b)">
+ <div style="background:#fff;border-radius:var(--radius);padding:40px;width:92%;max-width:400px;box-shadow:var(--shadow-xl);border:1px solid var(--border)">
+ <div style="text-align:center;margin-bottom:28px">
+ <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--primary),var(--primary-hover));border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;color:#fff"></div>
+ <h2 style="font-size:20px;font-weight:700;color:var(--text)">EHS 隐患风险管理平台</h2>
+ <p style="font-size:13px;color:var(--text-secondary);margin-top:6px">请登录以继续使用</p>
+ </div>
+ <div class="form-group" style="margin-bottom:16px">
+ <label>用户名</label>
+ <input type="text" id="login-username" placeholder="请输入用户名" onkeyup="if(event.key==='Enter')document.getElementById('login-password').focus()">
+ </div>
+ <div class="form-group" style="margin-bottom:24px">
+ <label>密码</label>
+ <input type="password" id="login-password" placeholder="请输入密码" onkeyup="if(event.key==='Enter')doLogin()">
+ </div>
+ <button class="btn btn-primary" style="width:100%" onclick="doLogin()">登录</button>
+ <p id="login-error" style="color:var(--danger);font-size:13px;text-align:center;margin-top:12px;display:none"></p>
+ </div>
+</div>
+
+<!-- ════════════════ 主应用 ════════════════ -->
+<div id="app-main">
+
+<div class="tabs">
+ <div class="tab active" onclick="switchTab('list')">隐患清单 <span class="badge-count" id="tab-count">0</span></div>
+ <div class="tab" onclick="switchTab('form')">新增隐患</div>
+ <div class="tab" onclick="switchTab('bi')">BI分析</div>
+</div>
+
+<div class="container">
+
+ <!-- ════════════════ 隐患清单 ════════════════ -->
+ <div id="view-list">
+ <div class="controls-bar">
+ <div class="filter-group">
+ <label>状态</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-status">
+ <option value="">全部</option><option value="open">Open</option><option value="挂起">挂起</option><option value="closed">Closed</option>
+ </select>
+ </div>
+ <div class="filter-group">
+ <label>等级</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-risk-level"><option value="">全部</option></select>
+ </div>
+ <div class="filter-group">
+ <label>子系统</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-subsystem"><option value="">全部</option></select>
+ </div>
+ <div class="filter-group">
+ <label>实验室</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-lab"><option value="">全部</option></select>
+        <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-version"><option value="">全部版本</option></select>
+ </div>
+ <div class="filter-group" style="flex:1;min-width:200px">
+ <input class="filter-input" type="text" id="filter-search" placeholder="搜索单号、描述、负责人…" style="width:100%" onkeyup="debounceSearch()">
+ </div>
+ <div class="filter-group">
+ <label>排序</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-sort-by">
+ <option value="">默认</option>
+ <option value="report_date">提交时间</option>
+ <option value="expected_close_date">剩余时间</option>
+ </select>
+ </div>
+ <div class="filter-group">
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-sort-order" title="排序方向">
+ <option value="desc">降序 ↓</option>
+ <option value="asc">升序 ↑</option>
+ </select>
+ </div>
+ <button class="btn btn-primary btn-sm" onclick="switchTab('form')">＋ 新增隐患</button>
+ <span class="list-count" id="list-count">加载中…</span>
+ </div>
+
+ <div class="table-wrap">
+ <table id="hazard-table">
+ <thead>
+ <tr>
+ <th>单号</th><th>实验室</th><th>楼层</th><th>版本</th><th>风险等级</th><th>风险类型</th>
+ <th>风险描述</th><th>状态</th><th>提出人</th><th>提出日期</th>
+ <th>整改责任人</th><th>期望闭环</th><th>闭环天数</th><th>操作</th>
+ </tr>
+ </thead>
+ <tbody id="hazard-tbody"></tbody>
+ </table>
+ </div>
+ <div class="pagination" id="pagination"></div>
+ </div>
+
+ <!-- ════════════════ 新增/编辑表单 ════════════════ -->
+ <div id="view-form" class="hidden">
+ <div class="card">
+ <div class="card-header"><h3 id="form-title"> 新增隐患记录</h3></div>
+ <div class="card-body">
+ <form onsubmit="submitForm(event)" id="hazard-form">
+ <input type="hidden" id="edit-id">
+ <div class="form-grid">
+ <div class="form-group span-3"><label>隐患单号</label>
+ <input type="text" id="f-hazard-no" readonly placeholder="自动生成">
+ </div>
+ <div class="form-group required"><label>实验室</label>
+ <select id="f-lab" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-lab-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>楼层</label>
+ <select id="f-floor" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-floor-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>子系统</label>
+ <select id="f-subsystem" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-subsystem-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>风险等级</label>
+ <select id="f-risk-level" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-risk-level-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>风险类型</label>
+ <select id="f-risk-type" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-risk-type-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>检查类型</label>
+ <select id="f-check-type" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-check-type-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>相关设备</label>
+ <select id="f-equipment" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-equipment-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>设备阶段</label>
+ <select id="f-equipment-phase" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-equipment-phase-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>版本</label>
+ <select id="f-version" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-version-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required span-3"><label>风险描述</label>
+ <textarea id="f-risk-desc" placeholder="详细描述风险情况…" rows="3"></textarea>
+ </div>
+ <div class="form-group required"><label>状态</label>
+ <select id="f-status"><option value=""></option></select>
+ </div>
+ <div class="form-group required"><label>提出人</label><input type="text" id="f-reporter" placeholder="姓名"></div>
+ <div class="form-group required"><label>提出日期</label><input type="text" id="f-report-date" readonly></div>
+ <div class="form-group required"><label>整改责任人</label><input type="text" id="f-responsible-person" placeholder="姓名"></div>
+ <div class="form-group"><label>责任人工号</label><input type="text" id="f-responsible-id"></div>
+ <div class="form-group"><label>责任人部门</label><input type="text" id="f-responsible-dept"></div>
+ <div class="form-group"><label>期望闭环日期</label><input type="date" id="f-expected-close-date"></div>
+ <div class="form-group"><label>闭环时间</label><input type="date" id="f-close-date" onchange="updateCloseDays()"></div>
+<div class="form-group"><label>闭环天数</label><input type="text" id="f-close-days" readonly style="background:#f5f5f5;font-weight:600"></div>
+ <div class="form-group"><label>验收人员</label><input type="text" id="f-verifier"></div>
+ <div class="form-group span-3"><label>整改建议</label><textarea id="f-fix-suggestion" rows="2"></textarea></div>
+ <div class="form-group span-3"><label>整改进展</label><textarea id="f-fix-progress" rows="2"></textarea></div>
+ <div class="form-group"><label>整改前照片</label><input type="text" id="f-photo-before" placeholder="URL或路径"></div>
+ <div class="form-group"><label>整改后照片</label><input type="text" id="f-photo-after" placeholder="URL或路径"></div>
+ <div class="form-group"><label>集成接口人</label><input type="text" id="f-interface-person"></div>
+ <div class="form-group"><label>是否需要提问题单</label><select id="f-need-issue"><option value=""></option></select></div>
+ <div class="form-group"><label>问题单号</label><input type="text" id="f-issue-no"></div>
+ <div class="form-group"><label>是否须在SDE闭环</label><select id="f-need-sde"><option value=""></option></select></div>
+ <div class="form-group span-3"><label>逾期对项目的影响</label><textarea id="f-overdue-impact" rows="2"></textarea></div>
+ </div>
+ <div class="form-actions">
+ <button type="button" class="btn btn-outline" onclick="switchTab('list')">取消</button>
+ <button type="submit" class="btn btn-primary">保存</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+
+ <!-- ════════════════ BI 分析 ════════════════ -->
+ <div id="view-bi" class="hidden">
+ <!-- 总览卡片 -->
+ <div class="bi-summary" id="bi-summary"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+ <!-- 主图：分布图 -->
+ <div class="chart-card">
+ <div class="chart-header">
+ <h3>主图 — 隐患分布</h3>
+ <div class="bi-controls-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+ <div class="bi-control-group">
+ <label>图表类型</label>
+ <select class="filter-select" id="bi-chart-type" onchange="biRefresh()">
+ <option value="bar">柱状图</option>
+ <option value="bar-h">水平柱图</option>
+ <option value="line">折线图</option>
+ <option value="area">面积图</option>
+ <option value="pie">饼图</option>
+ <option value="doughnut">环形图</option>
+ <option value="polarArea">极地图</option>
+ <option value="radar">雷达图</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>分组字段</label>
+ <select class="filter-select" id="bi-x-field" onchange="biRefresh()">
+ <option value="risk_level">风险等级</option>
+ <option value="risk_type">风险类型</option>
+ <option value="status">隐患状态</option>
+ <option value="lab">实验室</option>
+ <option value="floor">楼层</option>
+ <option value="subsystem">子系统</option>
+ <option value="check_type">检查类型</option>
+              <option value="version">版本</option>
+ <option value="equipment">相关设备</option>
+ <option value="equipment_phase">设备阶段</option>
+ <option value="reporter">提出人</option>
+ <option value="responsible_person">整改责任人</option>
+ <option value="responsible_dept">责任人部门</option><option value="close_days">闭环天数</option>
+ <option value="need_issue">需提问题单</option>
+ <option value="need_sde">SDE闭环</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>排序</label>
+ <select class="filter-select" id="bi-sort" onchange="biRefresh()">
+ <option value="desc">数量降序</option>
+ <option value="asc">数量升序</option>
+ <option value="label">名称排序</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>显示</label>
+ <select class="filter-select" id="bi-limit" onchange="biRefresh()">
+ <option value="0">全部</option>
+ <option value="5">Top 5</option>
+ <option value="10">Top 10</option>
+ <option value="15">Top 15</option>
+ <option value="20">Top 20</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>配色</label>
+ <select class="filter-select" id="bi-theme" onchange="changeTheme(this.value);biRefresh()">
+ <option value="default">默认</option>
+ <option value="ocean">海洋</option>
+ <option value="forest">森林</option>
+ <option value="sunset">日落</option>
+ <option value="berry">浆果</option>
+ <option value="mono">单色</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div class="chart-wrap aspect-3-1" id="bi-main-chart-wrap" style="aspect-ratio:16/9"><canvas id="bi-main-chart"></canvas></div>
+ </div>
+
+ <!-- 趋势分析图 -->
+ <div class="chart-card">
+ <div class="chart-header">
+ <h3>趋势分析 — 隐患提出趋势</h3>
+ <div class="bi-controls-row" style="display:flex;gap:10px;align-items:center">
+ <div class="bi-control-group">
+ <label>时间维度</label>
+ <select class="filter-select" id="trend-group" onchange="biTrend()">
+ <option value="report_date">按提出日期</option>
+ <option value="close_date">按闭环日期</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>时间范围</label>
+ <select class="filter-select" id="trend-days" onchange="biTrend()">
+ <option value="30">近30天</option>
+ <option value="7">近7天</option>
+ <option value="90">近90天</option>
+ <option value="180">近半年</option>
+ <option value="365">近一年</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>X轴密度</label>
+ <select class="filter-select" id="trend-density" onchange="biTrend()">
+ <option value="day">按天</option>
+ <option value="week">按周</option>
+ <option value="month">按月</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>图表类型</label>
+ <select class="filter-select" id="trend-type" onchange="biTrend()">
+ <option value="line">折线图</option>
+ <option value="bar">柱状图</option>
+ <option value="area">面积图</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div class="chart-wrap aspect-2-1" id="bi-trend-chart-wrap"><canvas id="bi-trend-chart"></canvas></div>
+ </div>
+
+ <!-- 实验室趋势图 -->
+ <div class="chart-card">
+ <div class="chart-header">
+ <h3>实验室趋势 — 各实验室隐患数量变化</h3>
+ <div class="bi-controls-row" style="display:flex;gap:10px;align-items:center">
+ <div class="bi-control-group">
+ <label>时间范围</label>
+ <select class="filter-select" id="lab-trend-days" onchange="biLabTrend()">
+ <option value="30">近30天</option>
+ <option value="7">近7天</option>
+ <option value="90">近90天</option>
+ <option value="180">近半年</option>
+ <option value="365">近一年</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>X轴密度</label>
+ <select class="filter-select" id="lab-trend-density" onchange="biLabTrend()">
+ <option value="day">按天</option>
+ <option value="week">按周</option>
+ <option value="month">按月</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>图表类型</label>
+ <select class="filter-select" id="lab-trend-type" onchange="biLabTrend()">
+ <option value="area">面积图</option>
+ <option value="line">折线图</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div class="chart-wrap aspect-2-1" id="bi-lab-trend-chart-wrap"><canvas id="bi-lab-trend-chart"></canvas></div>
+ </div>
+
+ <!-- 交叉分析图 -->
+ <div class="chart-card">
+ <div class="chart-header">
+ <h3>交叉分析</h3>
+ <div class="bi-controls-row" style="display:flex;gap:10px;align-items:center">
+ <div class="bi-control-group">
+ <label>X轴</label>
+ <select class="filter-select" id="cross-x-field" onchange="biCross()">
+ <option value="risk_level">风险等级</option><option value="risk_type">风险类型</option>
+ <option value="status">隐患状态</option><option value="lab">实验室</option>
+ <option value="floor">楼层</option><option value="subsystem">子系统</option>
+ <option value="check_type">检查类型</option>
+              <option value="version">版本</option><option value="equipment_phase">设备阶段</option>
+ </select>
+ </div>
+ <div class="bi-control-group">
+ <label>Y轴</label>
+ <select class="filter-select" id="cross-y-field" onchange="biCross()">
+ <option value="risk_type">风险类型</option><option value="risk_level">风险等级</option>
+ <option value="status">隐患状态</option><option value="lab">实验室</option>
+ <option value="floor">楼层</option><option value="subsystem">子系统</option>
+ <option value="check_type">检查类型</option>
+              <option value="version">版本</option><option value="equipment_phase">设备阶段</option>
+ </select>
+ </div>
+ </div>
+ </div>
+ <div class="chart-wrap aspect-2-1" id="bi-cross-chart-wrap" style="aspect-ratio:16/9"><canvas id="bi-cross-chart"></canvas></div>
+ </div>
+
+    </div>
+ <!-- 自定义图表 -->
+ <div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px">
+ <h3 style="font-size:14px;font-weight:700">自定义图表</h3>
+ <button class="btn btn-sm btn-primary" onclick="addBiChart()">＋ 新增图表</button>
+ </div>
+ <div id="bi-custom-charts"></div>
+ </div>
+
+</div>
+
+</div><!-- /app-main -->
+
+<!-- ════════════════ 选项管理弹窗 ════════════════ -->
+<div class="dialog-overlay hidden" id="options-dialog">
+ <div class="dialog">
+ <h3>字段选项管理</h3>
+ <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">管理各字段的下拉选项，新增的选项会自动应用到表单和筛选器。</p>
+ <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+ <select id="opt-field" class="filter-select"></select>
+ <input type="text" id="opt-new-value" placeholder="新选项值" class="filter-input" style="flex:1" onkeyup="if(event.key==='Enter')addOption()">
+ <button class="btn btn-primary btn-sm" onclick="addOption()">＋ 添加</button>
+ </div>
+ <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+ <div id="opt-list"></div>
+ <div style="text-align:right;margin-top:16px">
+ <button class="btn btn-outline btn-sm" onclick="closeOptionsManager()">关闭</button>
+ </div>
+ </div>
+</div>
+
+<!-- ════════════════ 用户管理弹窗 ════════════════ -->
+<div class="dialog-overlay hidden" id="user-dialog">
+ <div class="dialog">
+ <h3>用户管理</h3>
+ <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">管理员可添加、删除用户。默认管理员账号不可删除。</p>
+ <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+ <input type="text" id="user-new-name" placeholder="用户名" class="filter-input" style="flex:1;min-width:100px">
+ <input type="text" id="user-new-display" placeholder="显示名称" class="filter-input" style="flex:1;min-width:100px">
+ <input type="password" id="user-new-pwd" placeholder="密码" class="filter-input" style="flex:1;min-width:100px">
+ <select id="user-new-role" class="filter-select">
+ <option value="user">普通用户</option>
+ <option value="admin">管理员</option>
+ </select>
+ <button class="btn btn-primary btn-sm" onclick="addUser()">＋ 添加</button>
+ </div>
+ <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+ <div id="user-list" style="max-height:300px;overflow-y:auto">
+ <p style="font-size:13px;color:var(--text-secondary)">加载中…</p>
+ </div>
+ <div style="text-align:right;margin-top:16px">
+ <button class="btn btn-outline btn-sm" onclick="closeUserManager()">关闭</button>
+ </div>
+ </div>
+</div>
+
+<script>
+const API = '/api/hazard';
+let allOptions = {};
+let currentPage = 1;
+let currentUser = null; // {username, role, display_name}
+let userRole = ''; // 'admin' | 'user' | ''
+
+// ═══════════════════════════════════════════════════
+// API 请求封装（自动携带 Token，处理 401）
+// ═══════════════════════════════════════════════════
+async function apiFetch(url, opts) {
+ opts = opts || {};
+ opts.headers = opts.headers || {};
+ const token = localStorage.getItem('token');
+ if (token) {
+ opts.headers['Authorization'] = 'Bearer ' + token;
+ }
+ const r = await fetch(url, opts);
+ if (r.status === 401) {
+ localStorage.removeItem('token');
+ currentUser = null; userRole = '';
+ showLoginView();
+ throw new Error('登录已过期，请重新登录');
+ }
+ return r;
+}
+
+// ═══════════════════════════════════════════════════
+// 登录 / 注销
+// ═══════════════════════════════════════════════════
+function showLoginView() {
+ document.getElementById('view-login').classList.remove('hidden');
+ document.getElementById('view-login').style.display = 'flex';
+ document.getElementById('app-main').style.display = 'none';
+ document.getElementById('header-actions-admin').style.display = 'none';
+ document.getElementById('header-user').style.display = 'none';
+}
+
+function showAppView() {
+ document.getElementById('view-login').classList.add('hidden');
+ document.getElementById('view-login').style.display = 'none';
+ document.getElementById('app-main').style.display = '';
+ document.getElementById('header-user').style.display = 'flex';
+ updateHeaderVisibility();
+}
+
+function updateHeaderVisibility() {
+ const adminSection = document.getElementById('header-actions-admin');
+ const userMgrBtn = document.getElementById('btn-user-manager');
+ if (userRole === 'admin') {
+ adminSection.style.display = 'flex';
+ if (userMgrBtn) userMgrBtn.style.display = '';
+ } else {
+ adminSection.style.display = 'none';
+ if (userMgrBtn) userMgrBtn.style.display = 'none';
+ }
+}
+
+async function doLogin() {
+ const username = document.getElementById('login-username').value.trim();
+ const password = document.getElementById('login-password').value;
+ const errEl = document.getElementById('login-error');
+ errEl.style.display = 'none';
+ if (!username || !password) {
+ errEl.textContent = '请输入用户名和密码';
+ errEl.style.display = 'block';
+ return;
+ }
+ try {
+ const r = await fetch(API + '/auth/login', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({username, password})
+ });
+ const d = await r.json();
+ if (!r.ok || d.error) {
+ errEl.textContent = d.error || '登录失败';
+ errEl.style.display = 'block';
+ return;
+ }
+ localStorage.setItem('token', d.token);
+ currentUser = d.user;
+ userRole = d.user.role;
+ document.getElementById('user-name').textContent = (d.user.display_name || d.user.username) + ' (' + (userRole === 'admin' ? '管理员' : '用户') + ')';
+ document.getElementById('login-username').value = '';
+ document.getElementById('login-password').value = '';
+ showAppView();
+ await initApp();
+ } catch (e) {
+ errEl.textContent = '登录失败：' + e.message;
+ errEl.style.display = 'block';
+ }
+}
+
+function logout() {
+ if (!confirm('确认退出登录？')) return;
+ localStorage.removeItem('token');
+ currentUser = null;
+ userRole = '';
+ showLoginView();
+}
+
+// ═══════════════════════════════════════════════════
+// 初始化
+// ═══════════════════════════════════════════════════
+async function init() {
+ const token = localStorage.getItem('token');
+ if (!token) {
+ showLoginView();
+ return;
+ }
+ // 验证 token 有效性
+ try {
+ const r = await fetch(API + '/auth/me', {
+ headers: {'Authorization': 'Bearer ' + token}
+ });
+ if (r.status === 401) {
+ localStorage.removeItem('token');
+ showLoginView();
+ return;
+ }
+ const d = await r.json();
+ currentUser = d;
+ userRole = d.role || '';
+ document.getElementById('user-name').textContent = (d.display_name || d.username) + ' (' + (userRole === 'admin' ? '管理员' : '用户') + ')';
+ showAppView();
+ await initApp();
+ } catch (e) {
+ localStorage.removeItem('token');
+ showLoginView();
+ }
+}
+
+async function initApp() {
+ document.getElementById('f-report-date').value = new Date().toISOString().split('T')[0];
+ await loadOptions();
+ await loadList();
+}
+
+async function fetchLabOptions() {
+  const r = await apiFetch(`${API}/stats/aggregate?group_by=lab`);
+  const d = await r.json();
+  const sel = document.getElementById('bi-lab-filter');
+  // 保留第一个 "全部实验室" option
+  sel.innerHTML = '<option value="">全部实验室</option>';
+  d.labels.forEach(l => {
+    if (l) sel.innerHTML += `<option value="${l}">${l}</option>`;
+  });
+}
+
+async function biRefreshAll() {
+  biRefresh(); biCross(); biTrend(); biLabTrend();
+}
+
+async function loadOptions() {
+ const r = await apiFetch(API + '/options/fields');
+ allOptions = await r.json();
+
+ // 填充所有下拉框
+ const formFields = ['lab','floor','subsystem','risk_level','risk_type','check_type','equipment','equipment_phase','version','status','need_issue','need_sde'];
+ formFields.forEach(fn => {
+ const sel = document.getElementById('f-' + fn.replace(/_/g, '-'));
+ if (!sel) return;
+ const vals = allOptions[fn] || [];
+ sel.innerHTML = '<option value=""></option>' + vals.map(v => `<option value="${v}">${v}</option>`).join('') +
+ '<option value="__other__" class="other-opt" style="color:var(--primary);font-style:italic"> 其他（手动填写）</option>';
+ });
+
+ // 下拉可选（二级）- 只含常规值
+ function populateSel(id, fn) {
+ const sel = document.getElementById(id);
+ if (!sel) return;
+ (allOptions[fn] || []).forEach(v => {
+ const o = document.createElement('option'); o.value = v; o.textContent = v;
+ sel.appendChild(o);
+ });
+ }
+
+ // 筛选器选项
+ document.getElementById('filter-risk-level').innerHTML = '<option value="">全部等级</option>'; populateSel('filter-risk-level','risk_level');
+ document.getElementById('filter-subsystem').innerHTML = '<option value="">全部子系统</option>'; populateSel('filter-subsystem','subsystem');
+ document.getElementById('filter-lab').innerHTML = '<option value="">全部实验室</option>'; populateSel('filter-lab','lab');
+  document.getElementById('filter-version').innerHTML = '<option value="">全部版本</option>'; populateSel('filter-version','version');
+
+ // 选项管理编辑器
+ const of = document.getElementById('opt-field');
+ const labels = {
+ lab:'实验室',floor:'楼层',subsystem:'子系统',risk_level:'风险等级',
+ risk_type:'风险类型',check_type:'检查类型',equipment:'相关设备',
+ equipment_phase:'设备阶段',status:'状态',need_issue:'需要提问题单',
+ need_sde:'SDE闭环'
+ };
+ let builtin = Object.keys(labels);
+ Object.keys(allOptions).forEach(k => { if (!builtin.includes(k)) builtin.push(k); });
+ of.innerHTML = builtin.map(k => `<option value="${k}">${labels[k] || k}</option>`).join('');
+ of.onchange = () => renderOptionsList();
+ if (builtin.length) renderOptionsList();
+}
+
+function getFieldValue(fieldName) {
+ const sel = document.getElementById('f-' + fieldName.replace(/_/g, '-'));
+ const other = document.getElementById('f-' + fieldName.replace(/_/g, '-') + '-other');
+ if (sel && other && !other.classList.contains('hidden')) return other.value;
+ return sel ? sel.value : '';
+}
+
+function otherChanged(sel) {
+ const otherInput = document.getElementById(sel.id + '-other');
+ if (sel.value === '__other__') {
+ otherInput.classList.remove('hidden');
+ otherInput.focus();
+ sel.value = '';
+ } else {
+ if (otherInput) otherInput.classList.add('hidden');
+ }
+}
+
+// ═══════════════════════════════════════════════════
+// 选项管理
+// ═══════════════════════════════════════════════════
+function renderOptionsList() {
+ const fn = document.getElementById('opt-field').value;
+ const vals = allOptions[fn] || [];
+ const container = document.getElementById('opt-list');
+ container.innerHTML =
+ `<div class="opt-section"><h4>${fn}</h4><div class="opt-tags">${vals.length ?
+ vals.map((v, i) => `<span class="opt-tag">${v}<span class="del" onclick="delOption('${fn}','${v}')">✕</span></span>`).join('') :
+ '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>'}</div></div>`;
+}
+
+async function addOption() {
+ const fn = document.getElementById('opt-field').value;
+ const v = document.getElementById('opt-new-value').value.trim();
+ if (!fn || !v) return;
+ const r = await apiFetch(API + '/options', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({field_name: fn, value: v})
+ });
+ if (!r.ok) { showToast('添加失败', true); return; }
+ document.getElementById('opt-new-value').value = '';
+ await loadOptions();
+}
+
+async function delOption(field, value) {
+ const r = await apiFetch(API + '/options?field=' + field);
+ const opts = await r.json();
+ const found = opts.find(o => o.value === value);
+ if (found) {
+ const dr = await apiFetch(API + '/options/' + found.id, {method: 'DELETE'});
+ if (!dr.ok) { showToast('删除失败', true); return; }
+ }
+ await loadOptions();
+}
+
+// ═══════════════════════════════════════════════════
+// 用户管理
+// ═══════════════════════════════════════════════════
+function openUserManager() {
+ document.getElementById('user-dialog').classList.remove('hidden');
+ loadUserList();
+}
+function closeUserManager() {
+ document.getElementById('user-dialog').classList.add('hidden');
+}
+
+async function loadUserList() {
+ try {
+ const r = await apiFetch(API + '/auth/users');
+ if (!r.ok) { document.getElementById('user-list').innerHTML = '<p style="font-size:13px;color:var(--text-secondary)">加载失败</p>'; return; }
+ const users = await r.json();
+ const container = document.getElementById('user-list');
+ if (!users.length) {
+ container.innerHTML = '<p style="font-size:13px;color:var(--text-secondary)">暂无用户</p>';
+ return;
+ }
+ container.innerHTML = '<table style="width:100%;font-size:13px;border-collapse:collapse">' +
+ '<thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">用户名</th>' +
+ '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">显示名</th>' +
+ '<th style="text-align:left;padding:8px;border-bottom:1px solid var(--border)">角色</th>' +
+ '<th style="text-align:right;padding:8px;border-bottom:1px solid var(--border)">操作</th></tr></thead><tbody>' +
+ users.map(u => `<tr>
+ <td style="padding:8px;border-bottom:1px solid var(--divider)">${u.username}</td>
+ <td style="padding:8px;border-bottom:1px solid var(--divider)">${u.display_name || '-'}</td>
+ <td style="padding:8px;border-bottom:1px solid var(--divider)"><span class="badge badge-${u.role==='admin'?'high':'low'}">${u.role==='admin'?'管理员':'用户'}</span></td>
+ <td style="padding:8px;border-bottom:1px solid var(--divider);text-align:right">
+ ${u.username === 'admin' ? '<span style="color:var(--text-tertiary);font-size:12px">默认管理员</span>' : `<button class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="deleteUser(${u.id}, '${u.username}')">删除</button>`}
+ </td>
+ </tr>`).join('') + '</tbody></table>';
+ } catch (e) {
+ document.getElementById('user-list').innerHTML = '<p style="font-size:13px;color:var(--text-secondary)">加载失败：' + e.message + '</p>';
+ }
+}
+
+async function addUser() {
+ const username = document.getElementById('user-new-name').value.trim();
+ const display_name = document.getElementById('user-new-display').value.trim();
+ const password = document.getElementById('user-new-pwd').value;
+ const role = document.getElementById('user-new-role').value;
+ if (!username || !password) { showToast('请输入用户名和密码', true); return; }
+ const r = await apiFetch(API + '/auth/register', {
+ method: 'POST',
+ headers: {'Content-Type': 'application/json'},
+ body: JSON.stringify({username, password, display_name: display_name || username, role})
+ });
+ if (!r.ok) {
+ const d = await r.json().catch(() => ({}));
+ showToast('' + (d.error || '添加失败'), true);
+ return;
+ }
+ showToast('用户添加成功');
+ document.getElementById('user-new-name').value = '';
+ document.getElementById('user-new-display').value = '';
+ document.getElementById('user-new-pwd').value = '';
+ await loadUserList();
+}
+
+async function deleteUser(id, username) {
+ if (!confirm('确认删除用户 "' + username + '"？此操作不可撤销。')) return;
+ const r = await apiFetch(API + '/auth/users/' + id, {method: 'DELETE'});
+ if (!r.ok) { showToast('删除失败', true); return; }
+ showToast('已删除用户');
+ await loadUserList();
+}
+
+function openOptionsManager() {
+ document.getElementById('options-dialog').classList.remove('hidden');
+}
+function closeOptionsManager() {
+ document.getElementById('options-dialog').classList.add('hidden');
+}
+
+// ═══════════════════════════════════════════════════
+// Excel 导入导出
+// ═══════════════════════════════════════════════════
+async function exportExcel() {
+ try {
+ const r = await apiFetch(API + '/excel/export/excel');
+ if (!r.ok) { showToast('导出失败', true); return; }
+ const blob = await r.blob();
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url;
+ const disp = r.headers.get('content-disposition');
+ let fname = 'EHS隐患数据.xlsx';
+ if (disp) {
+ const m = disp.match(/filename\*?=utf-8''(.+)/);
+ if (m) fname = decodeURIComponent(m[1]);
+ }
+ a.download = fname;
+ document.body.appendChild(a); a.click(); a.remove();
+ URL.revokeObjectURL(url);
+ } catch (e) { showToast('导出失败：' + e.message, true); }
+}
+
+async function downloadTemplate() {
+ try {
+ const r = await apiFetch(API + '/excel/export/template');
+ if (!r.ok) { showToast('下载失败', true); return; }
+ const blob = await r.blob();
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url; a.download = 'EHS隐患导入模板.xlsx';
+ document.body.appendChild(a); a.click(); a.remove();
+ URL.revokeObjectURL(url);
+ } catch (e) { showToast('下载失败：' + e.message, true); }
+}
+
+async function importExcel(input) {
+ const file = input.files[0];
+ if (!file) return;
+ const btn = document.querySelector('#header-actions-admin .header-btn');
+ const orig = btn ? btn.textContent : '导入Excel';
+ if (btn) { btn.textContent = '⏳ 导入中…'; btn.disabled = true; }
+ try {
+ const fd = new FormData(); fd.append('file', file); fd.append('extract_options', 'true');
+ const r = await apiFetch(API + '/excel/import/excel', {method: 'POST', body: fd});
+ const d = await r.json();
+ if (d.ok) {
+ showToast('导入完成：' + d.imported + ' 条记录，新增 ' + d.options_added + ' 个选项');
+ await loadOptions(); await loadList();
+ } else {
+ showToast('导入失败：' + (d.error || '未知错误'), true);
+ }
+ } catch(e) {
+ showToast('导入失败：' + e.message, true);
+ }
+ if (btn) { btn.textContent = orig; btn.disabled = false; }
+ input.value = '';
+}
+
+// ═══════════════════════════════════════════════════
+// Toast 通知
+// ═══════════════════════════════════════════════════
+function showToast(msg, isError) {
+ const t = document.createElement('div');
+ t.textContent = msg;
+ Object.assign(t.style, {
+ position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+ padding:'12px 24px', borderRadius:'8px', background: isError ? '#dc2626' : '#16a34a',
+ color:'#fff', fontSize:'14px', fontWeight:'600', zIndex:'999',
+ boxShadow:'0 4px 12px rgba(0,0,0,.2)', transition:'opacity .3s, transform .3s', opacity:'0'
+ });
+ document.body.appendChild(t);
+ requestAnimationFrame(() => { t.style.opacity = '1'; t.style.transform = 'translateX(-50%) translateY(-4px)'; });
+ setTimeout(() => {
+ t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(8px)';
+ setTimeout(() => t.remove(), 300);
+ }, 3000);
+}
+
+// ═══════════════════════════════════════════════════
+// 清单
+// ═══════════════════════════════════════════════════
+async function loadList() {
+ const params = new URLSearchParams({page: currentPage, size: 30});
+ ['status','risk_level','subsystem','lab','version'].forEach(k => {
+ const v = document.getElementById('filter-' + k.replace(/_/g, '-')).value;
+ if (v) params.set(k, v);
+ });
+ const search = document.getElementById('filter-search').value.trim();
+ if (search) params.set('search', search);
+ const sortBy = document.getElementById('filter-sort-by').value;
+ const sortOrder = document.getElementById('filter-sort-order').value;
+ if (sortBy) {
+ params.set('sort_by', sortBy);
+ params.set('sort_order', sortOrder);
+ }
+
+ const r = await apiFetch(`${API}/hazards?${params}`);
+ const d = await r.json();
+ document.getElementById('list-count').textContent = `共 ${d.total} 条`;
+ document.getElementById('tab-count').textContent = d.total;
+ const tbody = document.getElementById('hazard-tbody');
+ const isAdmin = userRole === 'admin';
+ if (!d.items.length) {
+ tbody.innerHTML = '<tr><td colspan="14"><div class="empty-state"><div ></div><p>暂无隐患记录</p></div></td></tr>';
+ } else {
+ tbody.innerHTML = d.items.map(h => `
+ <tr class="${h.status==='closed'?'row-closed':''}">
+ <td>${isAdmin ? `<a href="#" onclick="editHazard(${h.id})">${h.hazard_no}</a>` : h.hazard_no}</td>
+ <td>${h.lab||'-'}</td><td>${h.floor||'-'}</td><td>${h.version||'-'}</td>
+ <td><span class="badge badge-${h.risk_level==='High'?'high':h.risk_level==='Medium'?'mid':'low'}">${h.risk_level||'-'}</span></td>
+ <td>${h.risk_type||'-'}</td>
+ <td class="cell-desc" title="${h.risk_desc||''}">${h.risk_desc||'-'}</td>
+ <td><span class="badge badge-${h.status==='open'?'open':h.status==='挂起'?'hang':'closed'}">${h.status}</span></td>
+ <td>${h.reporter||'-'}</td><td>${h.report_date||'-'}</td>
+ <td>${h.responsible_person||'-'}</td><td>${h.expected_close_date||'-'}</td>
+ <td>${h.close_date ? Math.round((new Date(h.close_date) - new Date(h.report_date)) / 86400000) + '天' : '-'}</td>
+ <td style="white-space:nowrap;text-align:center">
+ ${isAdmin ? `<div style="display:inline-flex;gap:6px;align-items:center">
+ <button class="btn btn-xs btn-outline" onclick="editHazard(${h.id})" title="编辑">编辑</button>
+ <button class="btn btn-xs btn-ghost" onclick="closeHazard(${h.id})" ${h.status==='closed'?'disabled':''} title="闭环">闭环</button>
+ <button class="btn btn-xs btn-ghost" onclick="delHazard(${h.id})" style="color:var(--danger)" title="删除">删除</button></div>` : '<span style="color:var(--text-tertiary)">-</span>'}
+ `).join('');
+
+
+ const pg = document.getElementById('pagination');
+ const totalPages = Math.ceil(d.total / 30);
+ pg.innerHTML = '';
+ if (currentPage > 1) {
+ pg.innerHTML += `<button class="btn btn-sm btn-outline" onclick="currentPage--;loadList()">◀ 上一页</button>`;
+ }
+ pg.innerHTML += `<span>第 ${currentPage} / ${Math.max(1,totalPages)} 页</span>`;
+ if (currentPage < totalPages) {
+ pg.innerHTML += `<button class="btn btn-sm btn-outline" onclick="currentPage++;loadList()">下一页 ▶</button>`;
+ }
+}
+}
+
+// ═══════════════════════════════════════════════════
+// Tab 切换
+// ═══════════════════════════════════════════════════
+function switchTab(tab) {
+ document.querySelectorAll('.tab').forEach((t, i) => {
+ const tabs = ['list','form','bi'];
+ t.classList.toggle('active', tabs[i] === tab);
+ });
+ ['view-list','view-form','view-bi'].forEach(id => {
+ document.getElementById(id).classList.toggle('hidden', !id.includes(tab));
+ });
+ if (tab === 'bi') biInit();
+ else if (tab === 'form') {
+ document.getElementById('edit-id').value = '';
+ document.getElementById('f-hazard-no').value = '';
+ document.getElementById('form-title').textContent = '新增隐患记录';
+ ['f-lab','f-floor','f-subsystem','f-risk-level','f-risk-type','f-check-type',
+ 'f-equipment','f-equipment-phase','f-version','f-status','f-need-issue','f-need-sde'].forEach(id => {
+ const el = document.getElementById(id);
+ if (el) { el.value = ''; const o = document.getElementById(id+'-other'); if(o) o.classList.add('hidden'); }
+ });
+ document.querySelectorAll('[id$="-other"]').forEach(el => el.classList.add('hidden'));
+ document.getElementById('f-report-date').value = new Date().toISOString().split('T')[0];
+ }
+}
+
+// ═══════════════════════════════════════════════════
+// 表单
+// ═══════════════════════════════════════════════════
+
+function updateCloseDays() {
+  const r = document.getElementById("f-report-date");
+  const c = document.getElementById("f-close-date");
+  const el = document.getElementById("f-close-days");
+  if (!r || !c || !el) return;
+  if (r.value && c.value) {
+    const days = Math.round((new Date(c.value) - new Date(r.value)) / 86400000);
+    el.value = days + " 天";
+  } else { el.value = ""; }
+}
+
+async function editHazard(id) {
+ const r = await apiFetch(API + '/hazards/' + id);
+ const h = await r.json();
+ switchTab('form');
+ document.getElementById('edit-id').value = h.id;
+ document.getElementById('edit-id').dataset.editMode = 'true';
+ document.getElementById('f-hazard-no').value = h.hazard_no;
+ document.getElementById('form-title').innerHTML = '编辑隐患 #' + h.hazard_no;
+
+ ['lab','floor','version','subsystem','risk_level','risk_type','check_type','equipment','equipment_phase','status','need_issue','need_sde'].forEach(fn => {
+ const sel = document.getElementById('f-' + fn.replace(/_/g, '-'));
+ const other = document.getElementById('f-' + fn.replace(/_/g, '-') + '-other');
+ const val = h[fn] || '';
+ const vals = allOptions[fn] || [];
+ if (vals.includes(val)) {
+ sel.value = val;
+ if (other) other.classList.add('hidden');
+ } else if (val) {
+ sel.value = '';
+ if (other) { other.classList.remove('hidden'); other.value = val; }
+ } else {
+ if (sel) sel.value = '';
+ if (other) other.classList.add('hidden');
+ }
+ });
+
+ ['reporter','report_date','responsible_person','responsible_id','responsible_dept',
+ 'expected_close_date','close_date','verifier','fix_suggestion','fix_progress',
+ 'photo_before','photo_after','interface_person','issue_no','overdue_impact','version','risk_desc'].forEach(fn => {
+ const el = document.getElementById('f-' + fn.replace(/_/g, '-'));
+ if (el) el.value = h[fn] || '';
+ });
+ updateCloseDays();
+}
+
+async function submitForm(e) {
+ e.preventDefault();
+ const editId = document.getElementById('edit-id').value;
+ const data = {
+ hazard_no: document.getElementById('f-hazard-no').value || await generateNo(),
+ lab: getFieldValue('lab'), floor: getFieldValue('floor'),
+ subsystem: getFieldValue('subsystem'),
+ risk_level: getFieldValue('risk_level'), risk_type: getFieldValue('risk_type'),
+ check_type: getFieldValue('check_type'),
+ equipment: getFieldValue('equipment'), equipment_phase: getFieldValue('equipment_phase'),
+ risk_desc: document.getElementById('f-risk-desc').value,
+ status: document.getElementById('f-status').value,
+ reporter: document.getElementById('f-reporter').value,
+ report_date: document.getElementById('f-report-date').value,
+ responsible_person: document.getElementById('f-responsible-person').value,
+ responsible_id: document.getElementById('f-responsible-id').value,
+ responsible_dept: document.getElementById('f-responsible-dept').value,
+ expected_close_date: document.getElementById('f-expected-close-date').value,
+ close_date: document.getElementById('f-close-date').value,
+ verifier: document.getElementById('f-verifier').value,
+ fix_suggestion: document.getElementById('f-fix-suggestion').value,
+ fix_progress: document.getElementById('f-fix-progress').value,
+ photo_before: document.getElementById('f-photo-before').value,
+ photo_after: document.getElementById('f-photo-after').value,
+ interface_person: document.getElementById('f-interface-person').value,
+ need_issue: document.getElementById('f-need-issue').value,
+ issue_no: document.getElementById('f-issue-no').value,
+ need_sde: document.getElementById('f-need-sde').value,
+ overdue_impact: document.getElementById('f-overdue-impact').value,
+    version: document.getElementById('f-version').value,
+ };
+ const url = editId ? API + '/hazards/' + editId : API + '/hazards';
+ const method = editId ? 'PUT' : 'POST';
+ const r = await apiFetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+ if (!r.ok) { showToast('保存失败：' + ((await r.json()).error || '未知错误'), true); return; }
+ showToast('保存成功');
+ switchTab('list');
+}
+
+async function generateNo() {
+ const lab = getFieldValue('lab');
+ const r = await apiFetch(API + '/hazards?size=1000');
+ const d = await r.json();
+ const today = new Date().toISOString().split('T')[0].replace(/-/g, '');
+ const todayItems = d.items.filter(h => h.hazard_no && h.hazard_no.startsWith(today + lab));
+ return today + lab + String(todayItems.length + 1).padStart(2, '0');
+}
+
+async function closeHazard(id) {
+ if (!confirm('确认闭环此隐患？')) return;
+ const date = new Date().toISOString().split('T')[0];
+ const r = await apiFetch(API + '/hazards/' + id + '/close', {
+ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({close_date: date})
+ });
+ if (!r.ok) { showToast('操作失败', true); return; }
+ showToast('已闭环');
+ loadList();
+}
+
+async function delHazard(id) {
+ if (!confirm('确认删除此隐患记录？此操作不可撤销。')) return;
+ const r = await apiFetch(API + '/hazards/' + id, {method:'DELETE'});
+ if (!r.ok) { showToast('删除失败', true); return; }
+ showToast('已删除');
+ loadList();
+}
+
+// ═══════════════════════════════════════════════════
+// BI 分析
+// ═══════════════════════════════════════════════════
+let mainChart = null, crossChart = null, trendChart = null, labTrendChart = null, biCustomCount = 0;
+
+function changeTheme(theme) {
+ currentTheme = theme;
+ // 刷新所有图表
+ biRefresh();
+ biCross();
+ biTrend();
+ biLabTrend();
+ document.querySelectorAll('[id^="bi-custom-"]').forEach(el => {
+ const cid = el.id + '-chart';
+ if (document.getElementById(cid)) {
+ biCustomRefresh(el.id, cid);
+ }
+ });
+}
+// 颜色主题系统
+const COLOR_THEMES = {
+ default: ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#84cc16','#6366f1','#14b8a6','#a855f7','#e11d48','#eab308','#0ea5e9'],
+ ocean: ['#0ea5e9','#0284c7','#0369a1','#22d3ee','#67e8f9','#164e63','#0891b2','#06b6d4','#5eead4','#99f6e4'],
+ forest: ['#16a34a','#15803d','#166534','#4ade80','#86efac','#14532d','#22c55e','#10b981','#34d399','#6ee7b7'],
+ sunset: ['#f97316','#ea580c','#c2410c','#fb923c','#fdba74','#7c2d12','#ef4444','#dc2626','#f59e0b','#fbbf24'],
+ berry: ['#e11d48','#be123c','#9f1239','#fb7185','#fda4af','#881337','#a855f7','#9333ea','#c084fc','#d8b4fe'],
+ mono: ['#334155','#475569','#64748b','#94a3b8','#cbd5e1','#1e293b','#0f172a','#94a3b8','#cbd5e1','#e2e8f0'],
+};
+let currentTheme = 'default';
+function getColors() { return COLOR_THEMES[currentTheme] || COLOR_THEMES.default; }
+
+async function biInit() {
+ // 切换 BI 时重绘
+ const s = await (await apiFetch(`${API}/stats/summary`)).json();
+   const openCount = (s.by_status?.open||0)+(s.by_status?.['挂起']||0);
+  const closedCount = s.by_status?.closed||0;
+  const total = s.total||0;
+  const closeRate = total > 0 ? Math.round(closedCount / total * 100) : 0;
+  document.getElementById('bi-summary').innerHTML = [
+    {label:'隐患总数',value:total,color:'#3b82f6',tip:'所有已记录的隐患数量'},
+    {label:'处理中',value:openCount,color:'#f59e0b',tip:'状态为 Open 和 挂起的隐患总数'},
+    {label:'已闭环',value:closedCount,color:'#10b981',tip:'状态为 Closed 的隐患数量'},
+    {label:'逾期未闭环',value:s.overdue||0,color:'#ef4444',tip:'期望闭环日期已过但仍未闭环的隐患（仅Open）'},
+    {label:'闭环率',value:closeRate + '%',color:'#8b5cf6',tip:'已闭环数 / 总数'}
+  ].map(c => `
+    <div class="bi-stat-card" title="${c.tip||''}">
+      <div class="num" style="color:${c.color}">${c.value}</div>
+      <div class="lbl">${c.label}</div>
+    </div>`).join('');
+
+ // 等待 DOM 渲染后初始化图表
+ biRefresh();
+ biCross();
+ biTrend();
+ biLabTrend();
+}
+
+async function biRefresh() {
+ let type = document.getElementById('bi-chart-type').value;
+ const xField = document.getElementById('bi-x-field').value;
+ const sort = document.getElementById('bi-sort').value;
+ const limit = parseInt(document.getElementById('bi-limit').value);
+ const colors = getColors();
+
+ const r = await apiFetch(`${API}/stats/aggregate?group_by=${xField}`);
+ const d = await r.json();
+
+ // 排序处理
+ let labels = [...d.labels];
+ let values = [...d.values];
+ const combined = labels.map((l, i) => ({ label: l, value: values[i] }));
+ if (sort === 'asc') {
+ combined.sort((a, b) => a.value - b.value);
+ } else if (sort === 'desc') {
+ combined.sort((a, b) => b.value - a.value);
+ } else {
+ combined.sort((a, b) => String(a.label).localeCompare(String(b.label), 'zh-CN'));
+ }
+
+ // 限制数量
+ let displayData = combined;
+ if (limit > 0 && combined.length > limit) {
+ const top = combined.slice(0, limit);
+ const otherSum = combined.slice(limit).reduce((s, item) => s + item.value, 0);
+ if (otherSum > 0) top.push({ label: '其他', value: otherSum });
+ displayData = top;
+ }
+
+ labels = displayData.map(x => x.label);
+ values = displayData.map(x => x.value);
+
+ const ctx = document.getElementById('bi-main-chart').getContext('2d');
+ if (mainChart) mainChart.destroy();
+
+ const isPieLike = type === 'pie' || type === 'doughnut' || type === 'polarArea';
+ const isRadar = type === 'radar';
+ const isHorizontal = type === 'bar-h';
+ const isArea = type === 'area';
+ const chartType = isHorizontal ? 'bar' : (isArea ? 'line' : type);
+
+ // 构建数据集
+ const dataset = {
+ label: xField,
+ data: values,
+ backgroundColor: isPieLike || isRadar ? colors : colors[0] + 'cc',
+ borderColor: isPieLike || isRadar ? colors : colors[0],
+ borderWidth: isPieLike ? 2 : 2,
+ borderRadius: isPieLike || isRadar ? 0 : 6,
+ maxBarThickness: 60,
+ fill: isArea,
+ tension: (type === 'line' || isArea) ? 0.3 : 0,
+ pointBackgroundColor: colors[0],
+ pointBorderColor: '#fff',
+ pointBorderWidth: 2,
+ pointRadius: (type === 'line' || isArea) ? 4 : 0,
+ pointHoverRadius: 6,
+ };
+
+ // 为柱状图每个柱子分配不同颜色
+ if (chartType === 'bar' && !isHorizontal) {
+ dataset.backgroundColor = labels.map((_, i) => colors[i % colors.length] + 'cc');
+ dataset.borderColor = labels.map((_, i) => colors[i % colors.length]);
+ }
+ if (isHorizontal) {
+ dataset.backgroundColor = labels.map((_, i) => colors[i % colors.length] + 'cc');
+ dataset.borderColor = labels.map((_, i) => colors[i % colors.length]);
+ }
+
+ const scales = {};
+ if (chartType === 'bar' || chartType === 'line') {
+ const xAxis = {
+ ticks: { font: { size: 11 }, maxRotation: 45, minRotation: 0 },
+ grid: { display: false }
+ };
+ const yAxis = {
+ beginAtZero: true,
+ ticks: { stepSize: 1, font: { size: 11 } },
+ grid: { color: '#f1f5f9' }
+ };
+ if (isHorizontal) {
+ scales.x = yAxis;
+ scales.y = xAxis;
+ } else {
+ scales.x = xAxis;
+ scales.y = yAxis;
+ }
+ }
+ if (isRadar) {
+ scales.r = {
+ beginAtZero: true,
+ ticks: { stepSize: 1, font: { size: 10 } },
+ grid: { color: '#e2e8f0' },
+ pointLabels: { font: { size: 11 } }
+ };
+ }
+
+ mainChart = new Chart(ctx, {
+ type: chartType,
+ data: {
+ labels: labels,
+ datasets: [dataset]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ indexAxis: isHorizontal ? 'y' : 'x',
+ plugins: {
+ legend: { display: isPieLike || isRadar, position: isRadar ? 'top' : 'right', labels: { boxWidth: 14, padding: 12, font: { size: 11 } } },
+ tooltip: {
+ backgroundColor: 'rgba(15,23,42,.85)',
+ cornerRadius: 8,
+ padding: 12,
+ titleFont: { size: 13, weight: 'bold' },
+ bodyFont: { size: 12 }
+ }
+ },
+ scales: scales
+ }
+ });
+}
+
+async function biCross() {
+ const xField = document.getElementById('cross-x-field').value;
+ const yField = document.getElementById('cross-y-field').value;
+ const colors = getColors();
+ const r = await apiFetch(`${API}/stats/cross?x_field=${xField}&y_field=${yField}`);
+ const d = await r.json();
+ const ctx = document.getElementById('bi-cross-chart').getContext('2d');
+ if (crossChart) crossChart.destroy();
+
+ crossChart = new Chart(ctx, {
+ type: 'bar',
+ data: {
+ labels: d.labels,
+ datasets: d.series.map((s, i) => ({
+ label: s.name, data: s.data,
+ backgroundColor: colors[i % colors.length] + 'cc',
+ borderColor: colors[i % colors.length],
+ borderWidth: 1,
+ borderRadius: 4,
+ borderSkipped: false
+ }))
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: {position: 'bottom', labels: {boxWidth: 12, padding: 10, font:{size:11}}},
+ tooltip: {
+ backgroundColor: 'rgba(15,23,42,.85)',
+ cornerRadius: 8,
+ padding: 10,
+ callbacks: {
+ footer: (items) => {
+ const sum = items.reduce((s, it) => s + it.parsed.y, 0);
+ return '小计: ' + sum;
+ }
+ }
+ }
+ },
+ scales: {
+ x: {stacked: true, ticks: {font:{size:10}}, grid: {display: false}},
+ y: {stacked: true, beginAtZero: true, ticks: {stepSize: 1, font:{size:10}}, grid: {color: '#f1f5f9'}}
+ }
+ }
+ });
+}
+
+// ═══════════════════════════════════════════════════
+// 趋势分析
+// ═══════════════════════════════════════════════════
+async function biTrend() {
+ const groupBy = document.getElementById('trend-group').value;
+ const days = document.getElementById('trend-days').value;
+ const density = document.getElementById('trend-density').value;
+ const type = document.getElementById('trend-type').value;
+ const colors = getColors();
+
+ const r = await apiFetch(`${API}/stats/trend?group_by=${groupBy}&days=${days}&density=${density}`);
+ const d = await r.json();
+ const ctx = document.getElementById('bi-trend-chart').getContext('2d');
+ if (trendChart) trendChart.destroy();
+
+ const isArea = type === 'area';
+ const chartType = isArea ? 'line' : type;
+
+ // 创建渐变填充
+ let bgColor = colors[0] + 'cc';
+ if (isArea) {
+ const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+ gradient.addColorStop(0, colors[0] + '60');
+ gradient.addColorStop(1, colors[0] + '05');
+ bgColor = gradient;
+ }
+
+ trendChart = new Chart(ctx, {
+ type: chartType,
+ data: {
+ labels: d.labels,
+ datasets: [{
+ label: groupBy === 'report_date' ? '隐患提出数' : '隐患闭环数',
+ data: d.values,
+ backgroundColor: bgColor,
+ borderColor: colors[0],
+ borderWidth: 2,
+ borderRadius: 4,
+ fill: isArea,
+ tension: 0.3,
+ pointBackgroundColor: '#fff',
+ pointBorderColor: colors[0],
+ pointBorderWidth: 2,
+ pointRadius: 4,
+ pointHoverRadius: 6
+ }]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: {display: false},
+ tooltip: {
+ backgroundColor: 'rgba(15,23,42,.85)',
+ cornerRadius: 8,
+ padding: 10,
+ titleFont: {size: 13, weight: 'bold'},
+ bodyFont: {size: 12}
+ }
+ },
+ scales: {
+ y: {beginAtZero: true, ticks: {stepSize: 1, font:{size:11}}, grid: {color: '#f1f5f9'}},
+ x: {ticks: {font:{size:10}, maxRotation: 45}, grid: {display: false}}
+ }
+ }
+ });
+}
+
+// ═══════════════════════════════════════════════════
+// 实验室趋势分析
+// ═══════════════════════════════════════════════════
+async function biLabTrend() {
+ const days = document.getElementById('lab-trend-days').value;
+ const density = document.getElementById('lab-trend-density').value;
+ const type = document.getElementById('lab-trend-type').value;
+ const colors = getColors();
+
+ const r = await apiFetch(`${API}/stats/trend-lab?days=${days}&density=${density}`);
+ const d = await r.json();
+ const ctx = document.getElementById('bi-lab-trend-chart').getContext('2d');
+ if (labTrendChart) labTrendChart.destroy();
+
+ const isArea = type === 'area';
+
+ labTrendChart = new Chart(ctx, {
+ type: 'line',
+ data: {
+ labels: d.labels,
+ datasets: d.series.map((s, i) => ({
+ label: s.name,
+ data: s.data,
+ backgroundColor: colors[i % colors.length] + (isArea ? '30' : '00'),
+ borderColor: colors[i % colors.length],
+ borderWidth: 2,
+ fill: isArea ? 'origin' : false,
+ tension: 0.3,
+ pointBackgroundColor: '#fff',
+ pointBorderColor: colors[i % colors.length],
+ pointBorderWidth: 2,
+ pointRadius: 3,
+ pointHoverRadius: 5
+ }))
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ legend: {position: 'bottom', labels: {boxWidth: 12, padding: 10, font:{size:11}}},
+ tooltip: {
+ mode: 'index',
+ intersect: false,
+ backgroundColor: 'rgba(15,23,42,.85)',
+ cornerRadius: 8,
+ padding: 10
+ }
+ },
+ scales: {
+ x: {ticks: {font:{size:10}, maxRotation: 45}, grid: {display: false}},
+ y: {beginAtZero: true, ticks: {stepSize: 1, font:{size:11}}, grid: {color: '#f1f5f9'}}
+ }
+ }
+ });
+}
+
+// ═══════════════════════════════════════════════════
+// 自定义图表
+// ═══════════════════════════════════════════════════
+function addBiChart() {
+ const id = 'bi-custom-' + (biCustomCount++);
+ const cid = id + '-chart';
+ const container = document.getElementById('bi-custom-charts');
+ const types = ['bar=柱状图','bar-h=水平柱图','line=折线图','area=面积图','pie=饼图','doughnut=环形图','polarArea=极地图','radar=雷达图','multi=多维分析'];
+ const fields = ['risk_level=风险等级','risk_type=风险类型','lab=实验室','status=状态',
+ 'floor=楼层','subsystem=子系统','check_type=检查类型','version=版本','equipment_phase=设备阶段',
+ 'equipment=相关设备','reporter=提出人','responsible_person=整改责任人',
+ 'responsible_dept=责任人部门','need_issue=需提问题单','need_sde=SDE闭环','close_days=闭环天数'];
+
+ container.innerHTML += `
+ <div class="custom-chart-item" id="${id}">
+ <div class="chart-toolbar">
+ <input type="text" class="filter-input" id="${id}-title" placeholder="图表标题" style="flex:1;min-width:80px" onchange="biCustomRefresh('${id}','${cid}')">
+ <select class="filter-select" onchange="biCustomTypeChange('${id}','${cid}')" id="${id}-type" style="min-width:90px">
+ ${types.map(t => { const [k, v] = t.split('='); return `<option value="${k}">${v}</option>`; }).join('')}
+ </select>
+ <select class="filter-select" onchange="biCustomRefresh('${id}','${cid}')" id="${id}-field" style="min-width:90px">
+ ${fields.map(f => { const [k, v] = f.split('='); return `<option value="${k}">${v}</option>`; }).join('')}
+ </select>
+ <select class="filter-select" onchange="biCustomRefresh('${id}','${cid}')" id="${id}-series" style="min-width:90px;display:none">
+ ${fields.map(f => { const [k, v] = f.split('='); return `<option value="${k}">${v}</option>`; }).join('')}
+ </select>
+ <select class="filter-select" onchange="biCustomRefresh('${id}','${cid}')" id="${id}-subtype" style="min-width:100px;display:none">
+ <option value="stacked-bar">堆叠柱</option>
+ <option value="grouped-bar">分组柱</option>
+ <option value="stacked-area">堆叠面积</option>
+ <option value="multi-line">多线</option>
+ </select>
+ <select class="filter-select" onchange="biCustomRefresh('${id}','${cid}')" id="${id}-theme" style="min-width:70px">
+ <option value="default">默认</option><option value="ocean">海洋</option><option value="forest">森林</option>
+ <option value="sunset">日落</option><option value="berry">浆果</option><option value="mono">单色</option>
+ </select>
+ <button class="btn btn-xs btn-ghost" style="color:var(--danger)" onclick="if(confirm('确认删除此图表？'))document.getElementById('${id}').remove()" title="删除">✕</button>
+ </div>
+ <div class="chart-wrap" style="aspect-ratio:16/9"><canvas id="${cid}"></canvas></div>
+ </div>`;
+ biCustomRefresh(id, cid);
+}
+
+function biCustomTypeChange(containerId, canvasId) {
+ const type = document.getElementById(containerId + '-type').value;
+ const seriesSel = document.getElementById(containerId + '-series');
+ const subtypeSel = document.getElementById(containerId + '-subtype');
+ if (type === 'multi') {
+ if (seriesSel) seriesSel.style.display = '';
+ if (subtypeSel) subtypeSel.style.display = '';
+ } else {
+ if (seriesSel) seriesSel.style.display = 'none';
+ if (subtypeSel) subtypeSel.style.display = 'none';
+ }
+ biCustomRefresh(containerId, canvasId);
+}
+
+async function biCustomRefresh(containerId, canvasId) {
+ let type = document.getElementById(containerId + '-type').value;
+ const field = document.getElementById(containerId + '-field').value;
+ const theme = document.getElementById(containerId + '-theme')?.value || 'default';
+ const colors = COLOR_THEMES[theme] || COLOR_THEMES.default;
+ const titleEl = document.getElementById(containerId + '-title');
+
+ const canvas = document.getElementById(canvasId);
+ if (!canvas) return;
+ const ctx = canvas.getContext('2d');
+ const old = Chart.getChart(canvasId);
+ if (old) old.destroy();
+
+ // ═══ 多维分析 ═══
+ if (type === 'multi') {
+ const seriesField = document.getElementById(containerId + '-series').value;
+ const subtype = document.getElementById(containerId + '-subtype').value;
+ const r = await apiFetch(`${API}/stats/cross?x_field=${field}&y_field=${seriesField}`);
+ const d = await r.json();
+
+ const isStacked = subtype === 'stacked-bar' || subtype === 'stacked-area';
+ const isArea = subtype === 'stacked-area';
+ const isLine = subtype === 'multi-line';
+ const chartType = isArea || isLine ? 'line' : 'bar';
+
+ const datasets = d.series.map((s, i) => ({
+ label: s.name,
+ data: s.data,
+ backgroundColor: colors[i % colors.length] + (isArea ? '80' : 'cc'),
+ borderColor: colors[i % colors.length],
+ borderWidth: 2,
+ fill: isArea,
+ tension: (isArea || isLine) ? 0.3 : 0,
+ borderRadius: 4,
+ pointBackgroundColor: '#fff',
+ pointBorderColor: colors[i % colors.length],
+ pointBorderWidth: 2,
+ pointRadius: (isArea || isLine) ? 3 : 0,
+ pointHoverRadius: 5
+ }));
+
+ new Chart(ctx, {
+ type: chartType,
+ data: { labels: d.labels, datasets: datasets },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ plugins: {
+ title: { display: !!(titleEl && titleEl.value), text: titleEl ? titleEl.value : '', font: { size: 13, weight: 'bold' }, color: '#64748b', padding: { bottom: 8 } },
+ legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+ tooltip: {
+ backgroundColor: 'rgba(15,23,42,.85)',
+ cornerRadius: 8,
+ padding: 10,
+ callbacks: {
+ footer: (items) => {
+ const sum = items.reduce((s, it) => s + it.parsed.y, 0);
+ return '小计: ' + sum;
+ }
+ }
+ }
+ },
+ scales: {
+ x: { stacked: isStacked, ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } },
+ y: { stacked: isStacked, beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f1f5f9' } }
+ }
+ }
+ });
+ return;
+ }
+
+ const r = await apiFetch(`${API}/stats/aggregate?group_by=${field}`);
+ const d = await r.json();
+
+ const isPieLike = type === 'pie' || type === 'doughnut' || type === 'polarArea';
+ const isRadar = type === 'radar';
+ const isHorizontal = type === 'bar-h';
+ const isArea = type === 'area';
+ const chartType = isHorizontal ? 'bar' : (isArea ? 'line' : type);
+
+ let bgColor = isPieLike || isRadar ? colors : colors[0] + 'cc';
+ let borderColor = isPieLike || isRadar ? colors : colors[0];
+
+ if (isArea) {
+ const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+ gradient.addColorStop(0, colors[0] + '60');
+ gradient.addColorStop(1, colors[0] + '05');
+ bgColor = gradient;
+ }
+
+ const dataset = {
+ data: d.values,
+ backgroundColor: bgColor,
+ borderColor: borderColor,
+ borderWidth: isPieLike ? 2 : 2,
+ borderRadius: isPieLike || isRadar ? 0 : 5,
+ maxBarThickness: 50,
+ fill: isArea,
+ tension: (type === 'line' || isArea) ? 0.3 : 0,
+ pointBackgroundColor: colors[0],
+ pointBorderColor: '#fff',
+ pointBorderWidth: 2,
+ pointRadius: (type === 'line' || isArea) ? 3 : 0,
+ pointHoverRadius: 5
+ };
+
+ if (chartType === 'bar' && !isHorizontal) {
+ dataset.backgroundColor = d.labels.map((_, i) => colors[i % colors.length] + 'cc');
+ dataset.borderColor = d.labels.map((_, i) => colors[i % colors.length]);
+ }
+ if (isHorizontal) {
+ dataset.backgroundColor = d.labels.map((_, i) => colors[i % colors.length] + 'cc');
+ dataset.borderColor = d.labels.map((_, i) => colors[i % colors.length]);
+ }
+
+ const scales = {};
+ if (chartType === 'bar' || chartType === 'line') {
+ const xAxis = { ticks: { font: { size: 10 }, maxRotation: 45 }, grid: { display: false } };
+ const yAxis = { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#f1f5f9' } };
+ if (isHorizontal) { scales.x = yAxis; scales.y = xAxis; }
+ else { scales.x = xAxis; scales.y = yAxis; }
+ }
+ if (isRadar) {
+ scales.r = { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } }, grid: { color: '#e2e8f0' }, pointLabels: { font: { size: 10 } } };
+ }
+
+ new Chart(ctx, {
+ type: chartType,
+ data: {
+ labels: d.labels,
+ datasets: [dataset]
+ },
+ options: {
+ responsive: true,
+ maintainAspectRatio: false,
+ indexAxis: isHorizontal ? 'y' : 'x',
+ plugins: {
+ title: { display: !!(titleEl && titleEl.value), text: titleEl ? titleEl.value : '', font: { size: 13, weight: 'bold' }, color: '#64748b', padding: { bottom: 8 } },
+ legend: { display: isPieLike || isRadar, position: isRadar ? 'top' : 'bottom', labels: { boxWidth: 12, padding: 10, font: { size: 11 } } },
+ tooltip: { backgroundColor: 'rgba(15,23,42,.85)', cornerRadius: 8, padding: 10, titleFont: { size: 12, weight: 'bold' }, bodyFont: { size: 11 } }
+ },
+ scales: scales
+ }
+ });
+}
+
+// ═══════════════════════════════════════════════════
+// 工具
+// ═══════════════════════════════════════════════════
+let searchTimer;
+
+function debounceSearch() {
+ clearTimeout(searchTimer);
+ searchTimer = setTimeout(() => { currentPage = 1; loadList(); }, 400);
+}
+
+init();
+</script>
+</body>
+</html>

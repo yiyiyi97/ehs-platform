@@ -1,0 +1,32 @@
+# 数据库
+*.db
+*.db-shm
+*.db-wal
+backend/data/**
+
+# 上传文件
+uploads/
+shield_backend/uploads/
+shield_backend/backend.log
+shield_backend/data/**
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Node
+shield_backend/node_modules/
+shield_backend/src/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
