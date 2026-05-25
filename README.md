@@ -1,7 +1,8 @@
 # EHS 工业安全管理平台
 
 > **E**nvironment, **H**ealth & **S**afety — 工业安全管理平台  
-> LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录
+> LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录  
+> 面向 EHS 同行的开源工具
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.136+-green) ![Vue.js](https://img.shields.io/badge/Frontend-Vanilla%20JS-orange) ![Node.js](https://img.shields.io/badge/Shield-Express.js-black)
 
@@ -37,14 +38,7 @@
 LOTO    Hazard   Incident
 ```
 
-**多地域部署**：深圳/武汉/北京/上海，每地域独立实例：
-
-| 地域 | 路径 | Python 端口 | Shield 端口 |
-|------|------|:-----------:|:-----------:|
-| 深圳 | `~/EHS_Dashboard/` | 8000 | 3456 |
-| 武汉 | `~/EHS_Dashboard_wuhan/` | 8001 | 3457 |
-| 北京 | `~/EHS_Dashboard_beijing/` | 8002 | 3458 |
-| 上海 | `~/EHS_Dashboard_shanghai/` | 8003 | 3459 |
+支持多实例部署，每个实例独立进程与数据库。
 
 ---
 
@@ -69,12 +63,12 @@ python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 # 一键部署
 bash deploy.sh
 
-# 或手动
+# 或手动 rsync 到服务器
 rsync -avz --delete \
   --exclude='.venv' --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='shield_backend/node_modules' --exclude='shield_backend/src' \
   --exclude='data/*.db' --exclude='uploads/*' \
-  ./ root@10.29.113.101:/root/EHS_Dashboard/
+  ./ user@your-server:/path/to/EHS_Dashboard/
 ```
 
 ---
@@ -198,19 +192,13 @@ Shield 模块使用独立 SQLite 数据库 `shield_backend/data.db`（由 Expres
 ### 服务管理
 
 ```bash
-# 深圳（主实例）
 systemctl status ehs-dashboard
 systemctl restart ehs-dashboard
-
-# 武汉/北京/上海
-systemctl restart ehs-wuhan
-systemctl restart ehs-beijing
-systemctl restart ehs-shanghai
 ```
 
 ### 心跳检测
 
-服务器 `:8000/api/shield/stats` 返回 shield 后端状态，如返回 `{"error":"Shield backend unavailable"}` 说明 Express 进程未启动。
+`/api/shield/stats` 返回 shield 后端状态，如返回 `{"error":"Shield backend unavailable"}` 说明 Express 进程未启动。
 
 ---
 
