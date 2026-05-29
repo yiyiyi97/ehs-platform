@@ -62,9 +62,11 @@ async def lifespan(app: FastAPI):
     from ehs_loto.models import init_db as loto_init_db
     from ehs_hazard.models import init_db as hazard_init_db
     from ehs_incident.models import init_db as incident_init_db
+    from ehs_equipment.models import init_db as equipment_init_db
     loto_init_db()
     hazard_init_db()
     incident_init_db()
+    equipment_init_db()
     print("EHS Dashboard ready on :8000")
 
     yield
@@ -112,6 +114,25 @@ app.include_router(hazard_options_router, prefix="/api/hazard/options", tags=["h
 app.include_router(hazard_excel_router, prefix="/api/hazard/excel", tags=["hazard-excel"])
 app.include_router(hazard_stats_router, prefix="/api/hazard/stats", tags=["hazard-stats"])
 app.include_router(hazard_core_router, prefix="/api/hazard", tags=["hazard-core"])
+
+# ═══════════════════════════════════════════════════════════════
+#  Equipment API
+# ═══════════════════════════════════════════════════════════════
+from ehs_equipment.api.auth import router as equipment_auth_router
+from ehs_equipment.api.equipments import router as equipment_equipments_router
+from ehs_equipment.api.options import router as equipment_options_router
+from ehs_equipment.api.stats import router as equipment_stats_router
+from ehs_equipment.api.excel import router as equipment_excel_router
+from ehs_equipment.api.audit import router as equipment_audit_router
+from ehs_equipment.main import core_router as equipment_core_router
+
+app.include_router(equipment_auth_router, prefix="/api/equipment/auth", tags=["equipment-auth"])
+app.include_router(equipment_equipments_router, prefix="/api/equipment/equipments", tags=["equipment-equipments"])
+app.include_router(equipment_options_router, prefix="/api/equipment/options", tags=["equipment-options"])
+app.include_router(equipment_stats_router, prefix="/api/equipment/stats", tags=["equipment-stats"])
+app.include_router(equipment_excel_router, prefix="/api/equipment/excel", tags=["equipment-excel"])
+app.include_router(equipment_audit_router, prefix="/api/equipment/audit", tags=["equipment-audit"])
+app.include_router(equipment_core_router, prefix="/api/equipment", tags=["equipment-core"])
 
 # ═══════════════════════════════════════════════════════════════
 #  Incident API
@@ -257,6 +278,7 @@ app.mount("/loto", StaticFiles(directory=os.path.join(FRONTEND_DIR, "loto"), htm
 app.mount("/hazard", StaticFiles(directory=os.path.join(FRONTEND_DIR, "hazard"), html=True), name="hazard")
 app.mount("/shield", StaticFiles(directory=os.path.join(FRONTEND_DIR, "shield"), html=True), name="shield")
 app.mount("/incident", StaticFiles(directory=os.path.join(FRONTEND_DIR, "incident"), html=True), name="incident")
+app.mount("/equipment", StaticFiles(directory=os.path.join(FRONTEND_DIR, "equipment"), html=True), name="equipment")
 
 @app.get("/")
 def dashboard():

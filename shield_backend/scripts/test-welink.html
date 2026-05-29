@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EHS → WeLink 推送测试</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 {
+      font-size: 24px;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-all;
+      display: none;
+    }
+    .result.success {
+      display: block;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .result.error {
+      display: block;
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .result.info {
+      display: block;
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+    }
+    .tip {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 WeLink 推送测试</h1>
+    <p class="subtitle">EHS 安全联锁系统 → WeLink 群机器人</p>
+
+    <div class="tip">
+      💡 <strong>纯前端直连</strong>：浏览器直接请求 WeLink 接口，无需后端。<br>
+      如遇 <strong>CORS 错误</strong>，说明浏览器安全策略拦截，请换后端方式。
+    </div>
+
+    <div class="form-group">
+      <label>Webhook Token</label>
+      <input type="text" id="token" placeholder="粘贴 WeLink 机器人 token（fc49bc…5f5d）" value="">
+    </div>
+
+    <div class="form-group">
+      <label>消息内容</label>
+      <textarea id="content" placeholder="默认：【EHS测试】来自浏览器的测试消息">【EHS测试】来自浏览器的测试消息 🧪</textarea>
+    </div>
+
+    <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()">
+      发送测试消息
+    </button>
+
+    <div class="result" id="result"></div>
+
+    <div class="footer">
+      发送IP会被自动附在消息末尾 · 时间戳 10 分钟内有效
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://open.welink.huaweicloud.com/api/werobot/v1/webhook/send';
+
+    async function sendMessage() {
+      const btn = document.getElementById('sendBtn');
+      const resultEl = document.getElementById('result');
+      const token = document.getElementById('token').value.trim();
+      let content = document.getElementById('content').value.trim();
+
+      if (!token) {
+        showResult('error', '请填写 Webhook Token（从 WeLink 群机器人设置里复制完整地址里的 token 值）');
+        return;
+      }
+      if (!content) content = '【EHS测试】来自浏览器的测试消息';
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="loading"></span>发送中...';
+      resultEl.className = 'result';
+      resultEl.style.display = 'none';
+
+      try {
+        // 获取公网IP（可选）
+        let ip = '';
+        try {
+          const ipResp = await fetch('https://api.ipify.org?format=json', { timeout: 3000 });
+          const ipData = await ipResp.json();
+          ip = ipData.ip;
+        } catch (e) {
+          ip = 'unknown';
+        }
+
+        const fullContent = `${content}\n时间：${new Date().toLocaleString('zh-CN')}\n发送IP：${ip}`;
+
+        const body = {
+          messageType: 'text',
+          content: { text: fullContent },
+          timeStamp: Date.now(),
+          uuid: crypto.randomUUID().replace(/-/g, ''),
+          isAt: false,
+          isAtAll: false
+        };
+
+        const url = `${API_BASE}?token=${encodeURIComponent(token)}&channel=standard`;
+
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Accept-Charset': 'UTF-8'
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await resp.json();
+
+        if (data.code === '0') {
+          showResult('success', `✅ 发送成功！<br><br>返回：${JSON.stringify(data)}`);
+        } else if (data.code === '58404') {
+          showResult('error', `❌ 机器人资源不存在 (58404)<br>检查 token 是否正确完整。`);
+        } else if (data.code === '58601') {
+          showResult('error', `❌ 参数错误 (58601)<br>${data.message || ''}<br><br>返回：${JSON.stringify(data)}`);
+        } else if (data.code === '58602') {
+          showResult('error', `❌ 机器人未启用 (58602)<br>请检查 WeLink 群机器人状态。`);
+        } else {
+          showResult('error', `⚠️ 未知错误<br>Code: ${data.code}<br>Message: ${data.message || ''}<br><br>完整返回：${JSON.stringify(data)}`);
+        }
+      } catch (err) {
+        if (err.name === 'TypeError' && err.message.includes('fetch')) {
+          showResult('error', `❌ 网络/CORS 错误<br><br>浏览器无法连接到 WeLink 服务器，可能原因：<br>1. 公司防火墙限制了该域名<br>2. 浏览器 CORS 安全策略拦截（WeLink 未开放跨域）<br>3. 网络不通<br><br>建议换 <strong>后端代理方式</strong> 或找 IT 放行域名。<br><br>原始错误：${err.message}`);
+        } else {
+          showResult('error', `❌ 发送失败<br>${err.name}: ${err.message}`);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '发送测试消息';
+      }
+    }
+
+    function showResult(type, html) {
+      const el = document.getElementById('result');
+      el.className = 'result ' + type;
+      el.innerHTML = html;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

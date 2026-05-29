@@ -84,8 +84,9 @@ def get_incident(incident_id: int, user=Depends(get_current_user)):
 def create_incident(data: dict, user=Depends(get_current_user)):
     db = SessionLocal()
     try:
-        # 自动生成单号
-        today = datetime.now().strftime("%Y%m%d")
+        # 根据报告日期生成单号
+        report_date = data.get("report_date", "")
+        today = report_date.replace("-", "") if report_date else datetime.now().strftime("%Y%m%d")
         prefix = data.get("lab", "") or ""
         existing = db.query(IncidentRecord).filter(
             IncidentRecord.incident_no.like(f"{today}{prefix}%")

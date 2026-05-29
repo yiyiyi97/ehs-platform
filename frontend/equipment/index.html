@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EHS 特种设备&计量设备管理平台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+/* ── 设计系统 ── */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+ --bg:#f1f5f9;--card:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--divider:#f1f5f9;
+ --text:#0f172a;--text-primary:#1e293b;--text-secondary:#64748b;--text-tertiary:#94a3b8;
+ --primary:#1d4ed8;--primary-light:#3b82f6;--primary-bg:#eff6ff;--primary-border:#bfdbfe;
+ --primary-hover:#1e40af;
+ --danger:#dc2626;--danger-bg:#fef2f2;--danger-light:#fca5a5;--success:#059669;--success-bg:#f0fdf4;
+ --warn:#b45309;--warn-bg:#fffbeb;--warn-light:#fcd34d;--info:#0e7490;--info-bg:#ecfeff;
+ --purple:#7c3aed;--pink:#db2777;--teal:#0d9488;
+ --shadow-sm:0 1px 2px 0 rgba(15,23,42,.04),0 1px 3px 0 rgba(15,23,42,.02);
+ --shadow:0 1px 3px 0 rgba(15,23,42,.06),0 1px 2px -1px rgba(15,23,42,.04);
+ --shadow-md:0 4px 8px -2px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.03);
+ --shadow-lg:0 12px 20px -4px rgba(15,23,42,.1),0 4px 8px -4px rgba(15,23,42,.04);
+ --shadow-xl:0 20px 32px -8px rgba(15,23,42,.12);
+ --radius:16px;--radius-md:12px;--radius-sm:10px;--radius-xs:8px;--radius-pill:999px;
+ --header-h:64px;--tabs-h:52px;
+ --ease-out:cubic-bezier(0.16,1,0.3,1);
+ --ease-in-out:cubic-bezier(0.65,0,0.35,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:"Inter","PingFang SC","Microsoft YaHei",-apple-system,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;letter-spacing:-0.01em}
+
+/* ── Header ── */
+header{
+ background:linear-gradient(135deg,#0f172a,#1e3a5f 40%,#1e1b4b);
+ color:#fff;padding:0 32px;height:var(--header-h);display:flex;
+ justify-content:space-between;align-items:center;
+ box-shadow:0 4px 20px rgba(15,23,42,.25);position:sticky;top:0;z-index:50
+}
+header h1{font-size:18px;font-weight:700;letter-spacing:.4px;display:flex;align-items:center;gap:12px}
+header h1 .icon{
+ width:36px;height:36px;background:rgba(255,255,255,.1);border-radius:var(--radius-sm);
+ display:flex;align-items:center;justify-content:center;font-size:20px;
+ border:1px solid rgba(255,255,255,.12);box-shadow:0 2px 8px rgba(0,0,0,.1)
+}
+.header-actions{display:flex;gap:10px}
+.header-btn{
+ padding:7px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+ color:#fff;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-weight:500;
+ transition:all .2s var(--ease-out);white-space:nowrap;display:flex;align-items:center;gap:6px;
+ backdrop-filter:blur(4px);letter-spacing:.2px
+}
+.header-btn:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.25);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.header-btn:active{transform:translateY(0) scale(.97)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:var(--tabs-h);position:sticky;top:var(--header-h);z-index:49}
+.tab{
+ padding:0 24px;height:100%;cursor:pointer;font-size:14px;color:var(--text-secondary);
+ border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;
+ transition:all .25s var(--ease-out);position:relative;user-select:none;font-weight:500
+}
+.tab:hover{color:var(--text);background:#f8fafc}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tab .badge-count{background:var(--primary-bg);color:var(--primary);font-size:11px;padding:2px 8px;border-radius:var(--radius-pill);font-weight:600;transition:all .2s}
+.tab:hover .badge-count{transform:scale(1.05)}
+
+/* ── Layout ── */
+.container{max-width:98vw;margin:0 auto;padding:28px 32px}
+.section-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:8px;letter-spacing:-0.02em}
+
+/* ── Card ── */
+.card{
+ background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+ border:1px solid var(--border);overflow:hidden;transition:box-shadow .3s var(--ease-out)
+}
+.card:hover{box-shadow:var(--shadow-md)}
+.card-body{padding:24px}
+.card-header{padding:18px 24px;border-bottom:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:700;color:var(--text-primary);letter-spacing:-0.01em}
+
+/* ── Controls Bar ── */
+.controls-bar{
+ display:flex;gap:10px;align-items:center;padding:16px 20px;
+ flex-wrap:wrap;background:#fff;border-radius:var(--radius-md);
+ box-shadow:var(--shadow-sm);border:1px solid var(--border);margin-bottom:20px;
+ transition:box-shadow .3s var(--ease-out)
+}
+.controls-bar:hover{box-shadow:var(--shadow)}
+.controls-bar .filter-group{display:flex;align-items:center;gap:6px}
+.controls-bar label{font-size:12px;color:var(--text-secondary);white-space:nowrap;font-weight:500}
+.filter-select,.filter-input{
+ padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);
+ font-size:13px;background:var(--surface);color:var(--text);
+ transition:all .2s var(--ease-out);font-family:inherit;min-width:0
+}
+.filter-select:focus,.filter-input:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff}
+.list-count{font-size:12px;color:var(--text-secondary);margin-left:auto;white-space:nowrap;font-weight:500}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-md);border:1px solid var(--border);box-shadow:var(--shadow-sm);background:#fff}
+table{width:100%;border-collapse:separate;border-spacing:0;background:#fff}
+th,td{padding:12px 16px;text-align:left;font-size:13px;border-bottom:1px solid var(--divider)}
+th{background:linear-gradient(180deg,#f8fafc,#f1f5f9);color:var(--text-secondary);font-weight:600;white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;border-bottom:1px solid var(--border)}
+th:first-child{border-top-left-radius:var(--radius-md)}
+th:last-child{border-top-right-radius:var(--radius-md)}
+tr:last-child td{border-bottom:none}
+tr:last-child td:first-child{border-bottom-left-radius:var(--radius-md)}
+tr:last-child td:last-child{border-bottom-right-radius:var(--radius-md)}
+tr{transition:background .15s var(--ease-out)}
+tr:hover td{background:#f1f5f9}
+
+/* 超期标红 */
+tr.row-overdue td{background:var(--danger-bg) !important;color:var(--danger) !important;font-weight:600}
+tr.row-overdue td .badge{background:var(--danger);color:#fff;border-color:var(--danger)}
+tr.row-overdue:hover td{background:#fecaca !important}
+
+/* 临期高亮 */
+tr.row-warning td{background:var(--warn-bg) !important;color:var(--warn) !important;font-weight:600}
+tr.row-warning td .badge{background:var(--warn);color:#fff;border-color:var(--warn)}
+tr.row-warning:hover td{background:#fde68a !important}
+
+/* 正常 */
+tr.row-normal td .badge{background:var(--success-bg);color:var(--success);border-color:#bbf7d0}
+
+td a{color:var(--primary);text-decoration:none;font-weight:500;transition:opacity .15s}
+td a:hover{opacity:.75}
+td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary)}
+
+/* ── Badge ── */
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-pill);font-size:11px;font-weight:600;gap:5px;white-space:nowrap;letter-spacing:.2px;border:1px solid transparent;transition:transform .15s var(--ease-out)}
+.badge:hover{transform:scale(1.03)}
+
+/* ── Form ── */
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.form-grid .span-2{grid-column:span 2}
+.form-grid .span-3{grid-column:span 3}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.2px}
+.form-group.required label::after{content:" *";color:var(--danger)}
+.form-group input,.form-group select,.form-group textarea{
+ padding:9px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);
+ font-size:13px;font-family:inherit;transition:all .2s var(--ease-out);background:var(--surface);color:var(--text);box-shadow:inset 0 1px 2px rgba(15,23,42,.03)
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+ outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.1),inset 0 1px 2px transparent;background:#fff
+}
+.form-group textarea{resize:vertical;min-height:64px;line-height:1.5}
+.form-group input[readonly]{background:#f1f5f9;color:var(--text-secondary);cursor:not-allowed;border-style:dashed}
+.form-actions{display:flex;gap:12px;justify-content:flex-end;padding:24px 0 4px}
+
+/* ── Buttons ── */
+.btn{
+ display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border:none;
+ border-radius:var(--radius-xs);font-size:13px;cursor:pointer;font-weight:600;
+ transition:all .2s var(--ease-out);white-space:nowrap;justify-content:center;line-height:1.4;
+ text-decoration:none;letter-spacing:.2px;position:relative;overflow:hidden
+}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .2s}
+.btn:hover::after{background:rgba(255,255,255,.08)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-hover));color:#fff;box-shadow:0 2px 8px rgba(29,78,216,.2)}
+.btn-primary:hover{box-shadow:0 4px 14px rgba(29,78,216,.3);transform:translateY(-1px)}
+.btn-success{background:linear-gradient(135deg,#059669,#047857);color:#fff;box-shadow:0 2px 8px rgba(5,150,105,.2)}
+.btn-success:hover{box-shadow:0 4px 14px rgba(5,150,105,.3);transform:translateY(-1px)}
+.btn-outline{background:#fff;border:1px solid var(--border);color:var(--text-primary)}
+.btn-outline:hover{background:var(--surface);border-color:#cbd5e1;box-shadow:var(--shadow-sm)}
+.btn-danger{background:linear-gradient(135deg,var(--danger),#b91c1c);color:#fff;box-shadow:0 2px 8px rgba(220,38,38,.2)}
+.btn-danger:hover{box-shadow:0 4px 14px rgba(220,38,38,.3);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--text-secondary);border:none;padding:6px 10px}
+.btn-ghost:hover{background:var(--bg);color:var(--text)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-xs{padding:4px 10px;font-size:11px;border-radius:6px}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none !important;box-shadow:none !important}
+.btn:disabled::after{display:none}
+
+/* ── Pagination ── */
+.pagination{display:flex;gap:8px;justify-content:center;align-items:center;padding:20px 0;font-size:13px;color:var(--text-secondary);font-weight:500}
+
+/* ── Dialog ── */
+.dialog-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);animation:fadeIn .2s var(--ease-out)}
+.dialog{background:#fff;border-radius:var(--radius);padding:32px;width:92%;max-width:720px;max-height:85vh;overflow-y:auto;box-shadow:var(--shadow-xl);animation:slideUp .25s var(--ease-out);border:1px solid var(--border)}
+.dialog h3{font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:-0.01em}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+/* ── Photo upload preview ── */
+.photo-preview{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.photo-preview-item{position:relative;width:120px;height:120px;border-radius:var(--radius-xs);overflow:hidden;border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center}
+.photo-preview-item img{width:100%;height:100%;object-fit:cover}
+.photo-preview-item .del-photo{position:absolute;top:4px;right:4px;width:22px;height:22px;background:var(--danger);color:#fff;border:none;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.photo-preview-item:hover .del-photo{opacity:1}
+.photo-upload-btn{
+ width:120px;height:120px;border:2px dashed var(--border);border-radius:var(--radius-xs);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+ cursor:pointer;transition:all .2s;color:var(--text-secondary);font-size:12px;background:var(--surface)
+}
+.photo-upload-btn:hover{border-color:var(--primary-light);color:var(--primary);background:var(--primary-bg)}
+
+/* ── Summary cards ── */
+.summary-cards{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
+.summary-card{
+ background:#fff;border-radius:var(--radius);padding:20px;text-align:center;
+ box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden;
+ transition:all .3s var(--ease-out)
+}
+.summary-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.summary-card .num{font-size:28px;font-weight:800;line-height:1.2;letter-spacing:-0.03em}
+.summary-card .lbl{font-size:12px;color:var(--text-secondary);margin-top:6px;font-weight:500}
+.summary-card .icon{width:40px;height:40px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:20px}
+.summary-card.total .icon{background:var(--primary-bg);color:var(--primary)}
+.summary-card.total .num{color:var(--primary)}
+.summary-card.special .icon{background:var(--info-bg);color:var(--info)}
+.summary-card.special .num{color:var(--info)}
+.summary-card.measure .icon{background:var(--purple);color:var(--purple);background:rgba(124,58,237,.08)}
+.summary-card.measure .num{color:var(--purple)}
+.summary-card.overdue .icon{background:var(--danger-bg);color:var(--danger)}
+.summary-card.overdue .num{color:var(--danger)}
+.summary-card.warning .icon{background:var(--warn-bg);color:var(--warn)}
+.summary-card.warning .num{color:var(--warn)}
+
+/* ── Alert banner ── */
+.alert-banner{padding:12px 20px;border-radius:var(--radius-xs);margin-bottom:20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px}
+.alert-banner.alert-danger{background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-light)}
+.alert-banner.alert-warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-light)}
+
+/* ── Utility ── */
+.hidden{display:none !important}
+.empty-state{text-align:center;padding:56px 20px;color:var(--text-secondary)}
+.empty-state .icon{font-size:52px;margin-bottom:16px;opacity:.35}
+.empty-state p{font-size:14px;font-weight:500}
+
+/* ── Responsive ── */
+@media(max-width:1024px){
+ .summary-cards{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:768px){
+ .container{padding:16px}
+ .form-grid{grid-template-columns:1fr}
+ .form-grid .span-2,.form-grid .span-3{grid-column:span 1}
+ .controls-bar .filter-group{flex:1 1 calc(50% - 8px)}
+ .summary-cards{grid-template-columns:repeat(2,1fr);gap:12px}
+ header{padding:0 16px}
+ .tabs{padding:0 16px}
+ .header-actions{gap:6px}
+ .header-btn{padding:6px 10px;font-size:11px}
+ .dialog{padding:24px;width:95%;border-radius:var(--radius-md)}
+}
+</style>
+</head>
+<body>
+
+<header>
+ <div style="display:flex;align-items:center;gap:10px">
+ <a href="/" style="color:#fff;text-decoration:none;opacity:0.7;transition:opacity .2s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" title="返回首页"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
+ <h1> EHS 特种设备&计量设备管理平台</h1>
+ </div>
+ <div class="header-actions" id="header-actions-admin" style="margin-left:auto">
+ <button class="header-btn" onclick="document.getElementById('import-file').click()">导入Excel</button>
+ <button class="header-btn" onclick="exportExcel()">导出Excel</button>
+ <input type="file" id="import-file" accept=".xlsx" onchange="importExcel(this)" style="display:none">
+ <button class="header-btn" onclick="downloadTemplate()">下载模板</button>
+ <button class="header-btn" onclick="openOptionsManager()">选项管理</button>
+ <button class="header-btn" onclick="openUserManager()" id="btn-user-manager">用户管理</button>
+ </div>
+ <div class="header-actions" id="header-user" style="display:flex;align-items:center;gap:12px">
+ <span id="user-name" style="font-size:13px;font-weight:500;opacity:.9"></span>
+ <button class="header-btn" onclick="logout()" title="退出登录">退出</button>
+ </div>
+</header>
+
+<!-- ════════════════ 登录视图 ════════════════ -->
+<div id="view-login" class="hidden" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e3a5f 40%,#1e1b4b)">
+ <div style="background:#fff;border-radius:var(--radius);padding:40px;width:92%;max-width:400px;box-shadow:var(--shadow-xl);border:1px solid var(--border)">
+ <div style="text-align:center;margin-bottom:28px">
+ <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--primary),var(--primary-hover));border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;color:#fff">&#9874;</div>
+ <h2 style="font-size:20px;font-weight:700;color:var(--text)">特种设备&计量设备管理</h2>
+ <p style="font-size:13px;color:var(--text-secondary);margin-top:6px">请登录以继续使用</p>
+ </div>
+ <div class="form-group" style="margin-bottom:16px">
+ <label>用户名</label>
+ <input type="text" id="login-username" placeholder="请输入用户名" onkeyup="if(event.key==='Enter')document.getElementById('login-password').focus()">
+ </div>
+ <div class="form-group" style="margin-bottom:24px">
+ <label>密码</label>
+ <input type="password" id="login-password" placeholder="请输入密码" onkeyup="if(event.key==='Enter')doLogin()">
+ </div>
+ <button class="btn btn-primary" style="width:100%" onclick="doLogin()">登录</button>
+ <p id="login-error" style="color:var(--danger);font-size:13px;text-align:center;margin-top:12px;display:none"></p>
+ </div>
+</div>
+
+<!-- ════════════════ 主应用 ════════════════ -->
+<div id="app-main">
+
+<div class="tabs">
+ <div class="tab active" onclick="switchTab('list')">设备清单 <span class="badge-count" id="tab-count">0</span></div>
+ <div class="tab" onclick="switchTab('form')">新增设备</div>
+ <div class="tab" onclick="switchTab('stats')">统计看板</div>
+</div>
+
+<div class="container">
+
+ <!-- ════════════════ 设备清单 ════════════════ -->
+ <div id="view-list">
+ <!-- 提醒横幅 -->
+ <div id="alert-banners"></div>
+
+ <div class="controls-bar">
+ <div class="filter-group">
+ <label>设备类型</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-equipment-type"><option value="">全部</option></select>
+ </div>
+ <div class="filter-group">
+ <label>类别</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-category"><option value="">全部</option></select>
+ </div>
+ <div class="filter-group">
+ <label>实验室</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-lab"><option value="">全部</option></select>
+ </div>
+ <div class="filter-group">
+ <label>校验状态</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-check-status">
+ <option value="">全部</option><option value="正常">正常</option><option value="临期">临期</option><option value="超期">超期</option>
+ </select>
+ </div>
+ <div class="filter-group">
+ <label>设备状态</label>
+ <select class="filter-select" onchange="currentPage=1;loadList()" id="filter-status">
+ <option value="">全部</option><option value="在用">在用</option><option value="停用">停用</option><option value="报废">报废</option>
+ </select>
+ </div>
+ <div class="filter-group" style="flex:1;min-width:200px">
+ <input class="filter-input" type="text" id="filter-search" placeholder="搜索编号、名称、责任人…" style="width:100%" onkeyup="debounceSearch()">
+ </div>
+ <button class="btn btn-primary btn-sm" onclick="switchTab('form')">+ 新增设备</button>
+ <span class="list-count" id="list-count">加载中…</span>
+ </div>
+
+ <div class="table-wrap">
+ <table id="equipment-table">
+ <thead>
+ <tr>
+ <th>设备编号</th><th>设备名称</th><th>类型</th><th>类别</th><th>实验室</th><th>楼层</th>
+ <th>下次校验</th><th>剩余天数</th><th>校验状态</th><th>设备状态</th>
+ <th>责任人</th><th>责任部门</th><th>操作</th>
+ </tr>
+ </thead>
+ <tbody id="equipment-tbody"></tbody>
+ </table>
+ </div>
+ <div class="pagination" id="pagination"></div>
+ </div>
+
+ <!-- ════════════════ 新增/编辑表单 ════════════════ -->
+ <div id="view-form" class="hidden">
+ <div class="card">
+ <div class="card-header"><h3 id="form-title"> 新增设备台账</h3></div>
+ <div class="card-body">
+ <form onsubmit="submitForm(event)" id="equipment-form">
+ <input type="hidden" id="edit-id">
+ <div class="form-grid">
+ <div class="form-group required"><label>设备编号</label><input type="text" id="f-equipment-no" placeholder="如：TS-2024-001"></div>
+ <div class="form-group required"><label>设备名称</label><input type="text" id="f-equipment-name" placeholder="设备名称"></div>
+ <div class="form-group required"><label>设备类型</label>
+ <select id="f-equipment-type" onchange="otherChanged(this);onEquipmentTypeChange()"><option value=""></option></select>
+ <input type="text" id="f-equipment-type-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group required"><label>类别</label>
+ <select id="f-category" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-category-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>实验室/区域</label>
+ <select id="f-lab" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-lab-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>楼层</label>
+ <select id="f-floor" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-floor-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
+ </div>
+ <div class="form-group"><label>制造商</label><input type="text" id="f-manufacturer" placeholder="制造商名称"></div>
+ <div class="form-group"><label>型号规格</label><input type="text" id="f-model" placeholder="型号规格"></div>
+ <div class="form-group"><label>出厂编号</label><input type="text" id="f-serial-no" placeholder="出厂编号/序列号"></div>
+ <div class="form-group span-3"><label>安装位置</label><input type="text" id="f-location" placeholder="具体安装位置"></div>
+ <div class="form-group"><label>责任人</label><input type="text" id="f-responsible-person" placeholder="责任人姓名"></div>
+ <div class="form-group"><label>责任部门</label><input type="text" id="f-responsible-dept" placeholder="责任部门"></div>
+ <div class="form-group"><label>采购日期</label><input type="date" id="f-purchase-date"></div>
+ <div class="form-group"><label>投用日期</label><input type="date" id="f-commissioning-date"></div>
+ <div class="form-group"><label>上次校验日期</label><input type="date" id="f-last-check-date" onchange="calcNextCheckDate()"></div>
+ <div class="form-group"><label>校验周期（月）</label>
+ <select id="f-check-cycle" onchange="calcNextCheckDate()"><option value=""></option></select>
+ </div>
+ <div class="form-group"><label>下次校验日期</label><input type="date" id="f-next-check-date" readonly style="background:#f1f5f9"></div>
+ <div class="form-group"><label>证书编号</label><input type="text" id="f-cert-no" placeholder="校验证书编号"></div>
+ <div class="form-group span-3">
+ <label>特种设备证照</label>
+ <div class="photo-preview" id="photo-preview">
+ <div class="photo-upload-btn" onclick="document.getElementById('photo-upload').click()">
+ <span style="font-size:24px">+</span>
+ <span>上传证照</span>
+ </div>
+ </div>
+ <input type="file" id="photo-upload" accept="image/*" style="display:none" onchange="handlePhotoUpload(this)">
+ </div>
+ <div class="form-group"><label>设备状态</label>
+ <select id="f-status"><option value=""></option></select>
+ </div>
+ <div class="form-group span-2"><label>备注</label><textarea id="f-remark" rows="2" placeholder="其他说明信息…"></textarea></div>
+ </div>
+ <div class="form-actions">
+ <button type="button" class="btn btn-outline" onclick="switchTab('list')">取消</button>
+ <button type="submit" class="btn btn-primary">保存</button>
+ </div>
+ </form>
+ </div>
+ </div>
+ </div>
+
+ <!-- ════════════════ 统计看板 ════════════════ -->
+ <div id="view-stats" class="hidden">
+ <div class="summary-cards" id="stats-summary"></div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+ <div class="card">
+ <div class="card-header"><h3>设备类别分布</h3></div>
+ <div class="card-body"><div style="position:relative;height:280px"><canvas id="chart-category"></canvas></div></div>
+ </div>
+ <div class="card">
+ <div class="card-header"><h3>按实验室分布</h3></div>
+ <div class="card-body"><div style="position:relative;height:280px"><canvas id="chart-lab"></canvas></div></div>
+ </div>
+ </div>
+ </div>
+
+ </div>
+</div>
+
+<!-- ════════════════ 选项管理弹窗 ════════════════ -->
+<div id="dialog-options" class="hidden">
+<div class="dialog-overlay" onclick="if(event.target===this)closeOptionsManager()">
+<div class="dialog" style="max-width:600px">
+<h3>选项管理</h3>
+<div id="options-content"></div>
+<div style="display:flex;justify-content:flex-end;margin-top:20px">
+ <button class="btn btn-outline" onclick="closeOptionsManager()">关闭</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ════════════════ 用户管理弹窗 ════════════════ -->
+<div id="dialog-users" class="hidden">
+<div class="dialog-overlay" onclick="if(event.target===this)closeUserManager()">
+<div class="dialog" style="max-width:600px">
+<h3>用户管理</h3>
+<div id="users-content"></div>
+<div style="display:flex;justify-content:space-between;margin-top:20px">
+ <button class="btn btn-outline" onclick="showRegisterForm()">+ 新增用户</button>
+ <button class="btn btn-outline" onclick="closeUserManager()">关闭</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ════════════════ 图片预览弹窗 ════════════════ -->
+<div id="dialog-photo" class="hidden">
+<div class="dialog-overlay" onclick="if(event.target===this)closePhotoViewer()">
+<div class="dialog" style="max-width:800px;padding:16px">
+<img id="photo-viewer-img" style="width:100%;border-radius:var(--radius-xs)" src="" alt="证照预览">
+</div>
+</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   全局状态
+═══════════════════════════════════════════════════════════════ */
+const API_BASE = '/api/equipment';
+let currentUser = null;
+let currentToken = localStorage.getItem('equipment_token') || '';
+let currentPage = 1;
+let pageSize = 50;
+let currentTab = 'list';
+let fieldOptions = {};
+let photoUrls = [];
+let editingId = null;
+let searchDebounce = null;
+let chartCategory = null;
+let chartLab = null;
+
+/* ═══════════════════════════════════════════════════════════════
+   初始化
+═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+ if (currentToken) {
+  try {
+   const r = await fetch(`${API_BASE}/auth/me`, {headers:{'Authorization':'Bearer '+currentToken}});
+   if (r.ok) { currentUser = await r.json(); showMain(); }
+   else { showLogin(); }
+  } catch(e){ showLogin(); }
+ } else { showLogin(); }
+});
+
+function showLogin(){
+ document.getElementById('view-login').classList.remove('hidden');
+ document.getElementById('app-main').classList.add('hidden');
+}
+function showMain(){
+ document.getElementById('view-login').classList.add('hidden');
+ document.getElementById('app-main').classList.remove('hidden');
+ document.getElementById('user-name').textContent = currentUser?.display_name || currentUser?.username || '';
+ if (currentUser?.role !== 'admin') {
+  document.getElementById('header-actions-admin').style.display = 'none';
+ }
+ loadOptions().then(() => {
+  initFilters();
+  loadList();
+ });
+}
+
+async function doLogin(){
+ const username = document.getElementById('login-username').value.trim();
+ const password = document.getElementById('login-password').value;
+ const errEl = document.getElementById('login-error');
+ try {
+  const r = await fetch(`${API_BASE}/auth/login`, {
+   method:'POST', headers:{'Content-Type':'application/json'},
+   body: JSON.stringify({username, password})
+  });
+  const data = await r.json();
+  if (!r.ok) { errEl.textContent = data.detail || '登录失败'; errEl.style.display = 'block'; return; }
+  currentToken = data.token;
+  currentUser = data.user;
+  localStorage.setItem('equipment_token', currentToken);
+  errEl.style.display = 'none';
+  showMain();
+ } catch(e){ errEl.textContent = '网络错误'; errEl.style.display = 'block'; }
+}
+
+function logout(){
+ fetch(`${API_BASE}/auth/logout`, {method:'POST', headers:{'Authorization':'Bearer '+currentToken}}).catch(()=>{});
+ currentToken = ''; currentUser = null;
+ localStorage.removeItem('equipment_token');
+ showLogin();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Tab 切换
+═══════════════════════════════════════════════════════════════ */
+function switchTab(tab){
+ currentTab = tab;
+ document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+ const tabIdx = tab==='list'?0:tab==='form'?1:tab==='stats'?2:3;
+ document.querySelectorAll('.tab')[tabIdx].classList.add('active');
+ ['view-list','view-form','view-stats'].forEach(id => document.getElementById(id).classList.add('hidden'));
+ document.getElementById('view-'+tab).classList.remove('hidden');
+ if (tab === 'list') loadList();
+ if (tab === 'form') { if (!editingId) resetForm(); }
+ if (tab === 'stats') loadStats();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   选项加载
+═══════════════════════════════════════════════════════════════ */
+async function loadOptions(){
+ try {
+  const r = await fetch(`${API_BASE}/options/fields`, {headers:{'Authorization':'Bearer '+currentToken}});
+  if (r.ok) fieldOptions = await r.json();
+ } catch(e){ console.error(e); }
+}
+
+function initFilters(){
+ fillSelect('filter-equipment-type', fieldOptions.equipment_type);
+ fillSelect('filter-category', fieldOptions.category);
+ fillSelect('filter-lab', fieldOptions.lab);
+
+ fillSelect('f-equipment-type', fieldOptions.equipment_type, true);
+ fillSelect('f-category', fieldOptions.category, true);
+ fillSelect('f-lab', fieldOptions.lab, true);
+ fillSelect('f-floor', fieldOptions.floor, true);
+ fillSelect('f-check-cycle', fieldOptions.check_cycle);
+ fillSelect('f-status', fieldOptions.status);
+}
+
+function fillSelect(id, opts, withOther){
+ const el = document.getElementById(id);
+ if (!el || !opts) return;
+ const current = el.value;
+ el.innerHTML = '<option value=""></option>';
+ opts.forEach(o => {
+  const option = document.createElement('option');
+  option.value = o.value; option.textContent = o.value;
+  el.appendChild(option);
+ });
+ if (withOther) {
+  const other = document.createElement('option');
+  other.value = '__other__'; other.textContent = '其他';
+  el.appendChild(other);
+ }
+ el.value = current || '';
+}
+
+function otherChanged(select){
+ const otherId = select.id + '-other';
+ const otherEl = document.getElementById(otherId);
+ if (otherEl) {
+  otherEl.classList.toggle('hidden', select.value !== '__other__');
+  if (select.value !== '__other__') otherEl.value = '';
+ }
+}
+
+function onEquipmentTypeChange(){
+ const type = getSelectValue('f-equipment-type');
+ // 根据类型过滤类别选项
+ if (fieldOptions.category) {
+  const cats = fieldOptions.category.filter(o => {
+   if (type === '特种设备') return ['压力容器','电梯','起重机械','叉车','安全阀'].includes(o.value);
+   if (type === '计量设备') return ['压力表','温度计','流量计','可燃气体探测器'].includes(o.value);
+   return true;
+  });
+  fillSelect('f-category', cats, true);
+ }
+}
+
+function getSelectValue(id){
+ const el = document.getElementById(id);
+ if (!el) return '';
+ if (el.value === '__other__') {
+  const other = document.getElementById(id + '-other');
+  return other ? other.value.trim() : '';
+ }
+ return el.value;
+}
+
+function setSelectValue(id, value){
+ const el = document.getElementById(id);
+ if (!el) return;
+ let found = false;
+ for (let i=0;i<el.options.length;i++){
+  if (el.options[i].value === value){ el.selectedIndex=i; found=true; break; }
+ }
+ if (!found && value) {
+  const other = document.getElementById(id+'-other');
+  if (other) { other.value = value; other.classList.remove('hidden'); el.value='__other__'; }
+ } else {
+  const other = document.getElementById(id+'-other');
+  if (other) other.classList.add('hidden');
+ }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   表单逻辑
+═══════════════════════════════════════════════════════════════ */
+function calcNextCheckDate(){
+ const lastDate = document.getElementById('f-last-check-date').value;
+ const cycle = parseInt(document.getElementById('f-check-cycle').value) || 0;
+ if (lastDate && cycle > 0) {
+  const d = new Date(lastDate);
+  d.setMonth(d.getMonth() + cycle);
+  document.getElementById('f-next-check-date').value = d.toISOString().split('T')[0];
+ }
+}
+
+function resetForm(){
+ editingId = null;
+ document.getElementById('form-title').textContent = ' 新增设备台账';
+ document.getElementById('equipment-form').reset();
+ document.getElementById('edit-id').value = '';
+ document.getElementById('f-next-check-date').value = '';
+ photoUrls = [];
+ renderPhotoPreview();
+ // 隐藏其他输入
+ document.querySelectorAll('[id$="-other"]').forEach(el => el.classList.add('hidden'));
+}
+
+function editEquipment(id){
+ editingId = id;
+ document.getElementById('form-title').textContent = ' 编辑设备台账';
+ fetch(`${API_BASE}/equipments/${id}`, {headers:{'Authorization':'Bearer '+currentToken}})
+  .then(r => r.json())
+  .then(data => {
+   document.getElementById('edit-id').value = data.id;
+   document.getElementById('f-equipment-no').value = data.equipment_no || '';
+   document.getElementById('f-equipment-name').value = data.equipment_name || '';
+   setSelectValue('f-equipment-type', data.equipment_type);
+   setSelectValue('f-category', data.category);
+   setSelectValue('f-lab', data.lab);
+   setSelectValue('f-floor', data.floor);
+   document.getElementById('f-manufacturer').value = data.manufacturer || '';
+   document.getElementById('f-model').value = data.model || '';
+   document.getElementById('f-serial-no').value = data.serial_no || '';
+   document.getElementById('f-location').value = data.location || '';
+   document.getElementById('f-responsible-person').value = data.responsible_person || '';
+   document.getElementById('f-responsible-dept').value = data.responsible_dept || '';
+   document.getElementById('f-purchase-date').value = data.purchase_date || '';
+   document.getElementById('f-commissioning-date').value = data.commissioning_date || '';
+   document.getElementById('f-last-check-date').value = data.last_check_date || '';
+   setSelectValue('f-check-cycle', String(data.check_cycle || ''));
+   document.getElementById('f-next-check-date').value = data.next_check_date || '';
+   document.getElementById('f-cert-no').value = data.cert_no || '';
+   setSelectValue('f-status', data.status);
+   document.getElementById('f-remark').value = data.remark || '';
+   photoUrls = data.cert_photo ? [data.cert_photo] : [];
+   renderPhotoPreview();
+   switchTab('form');
+  });
+}
+
+async function submitForm(e){
+ e.preventDefault();
+ const payload = {
+  equipment_no: document.getElementById('f-equipment-no').value.trim(),
+  equipment_name: document.getElementById('f-equipment-name').value.trim(),
+  equipment_type: getSelectValue('f-equipment-type'),
+  category: getSelectValue('f-category'),
+  lab: getSelectValue('f-lab'),
+  floor: getSelectValue('f-floor'),
+  manufacturer: document.getElementById('f-manufacturer').value.trim(),
+  model: document.getElementById('f-model').value.trim(),
+  serial_no: document.getElementById('f-serial-no').value.trim(),
+  location: document.getElementById('f-location').value.trim(),
+  responsible_person: document.getElementById('f-responsible-person').value.trim(),
+  responsible_dept: document.getElementById('f-responsible-dept').value.trim(),
+  purchase_date: document.getElementById('f-purchase-date').value,
+  commissioning_date: document.getElementById('f-commissioning-date').value,
+  last_check_date: document.getElementById('f-last-check-date').value,
+  next_check_date: document.getElementById('f-next-check-date').value,
+  check_cycle: parseInt(document.getElementById('f-check-cycle').value) || null,
+  cert_no: document.getElementById('f-cert-no').value.trim(),
+  cert_photo: photoUrls[0] || '',
+  status: document.getElementById('f-status').value,
+  remark: document.getElementById('f-remark').value.trim(),
+ };
+
+ if (!payload.equipment_no || !payload.equipment_name || !payload.equipment_type) {
+  alert('请填写必填项（设备编号、名称、类型）'); return;
+ }
+
+ try {
+  const url = editingId ? `${API_BASE}/equipments/${editingId}` : `${API_BASE}/equipments`;
+  const method = editingId ? 'PUT' : 'POST';
+  const r = await fetch(url, {
+   method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+   body: JSON.stringify(payload)
+  });
+  if (!r.ok) { const err = await r.json(); alert(err.detail || '保存失败'); return; }
+  alert('保存成功');
+  resetForm();
+  switchTab('list');
+ } catch(e){ alert('网络错误'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   图片上传
+═══════════════════════════════════════════════════════════════ */
+async function handlePhotoUpload(input){
+ const file = input.files[0];
+ if (!file) return;
+ const formData = new FormData();
+ formData.append('file', file);
+ try {
+  const r = await fetch(`${API_BASE}/equipments/upload`, {
+   method:'POST', headers:{'Authorization':'Bearer '+currentToken}, body: formData
+  });
+  if (!r.ok) { alert('上传失败'); return; }
+  const data = await r.json();
+  photoUrls = [data.url];
+  renderPhotoPreview();
+ } catch(e){ alert('上传失败'); }
+ input.value = '';
+}
+
+function renderPhotoPreview(){
+ const container = document.getElementById('photo-preview');
+ let html = '';
+ photoUrls.forEach(url => {
+  html += `<div class="photo-preview-item">
+   <img src="${url}" alt="证照" onclick="viewPhoto('${url}')">
+   <button type="button" class="del-photo" onclick="deletePhoto()">&times;</button>
+  </div>`;
+ });
+ html += `<div class="photo-upload-btn" onclick="document.getElementById('photo-upload').click()">
+  <span style="font-size:24px">+</span><span>上传证照</span>
+ </div>`;
+ container.innerHTML = html;
+}
+
+function deletePhoto(){
+ photoUrls = [];
+ renderPhotoPreview();
+}
+
+function viewPhoto(url){
+ document.getElementById('photo-viewer-img').src = url;
+ document.getElementById('dialog-photo').classList.remove('hidden');
+}
+function closePhotoViewer(){
+ document.getElementById('dialog-photo').classList.add('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   列表加载
+═══════════════════════════════════════════════════════════════ */
+async function loadList(){
+ const params = new URLSearchParams();
+ params.set('page', currentPage); params.set('size', pageSize);
+ const search = document.getElementById('filter-search').value.trim();
+ if (search) params.set('search', search);
+ const et = document.getElementById('filter-equipment-type').value;
+ if (et) params.set('equipment_type', et);
+ const cat = document.getElementById('filter-category').value;
+ if (cat) params.set('category', cat);
+ const lab = document.getElementById('filter-lab').value;
+ if (lab) params.set('lab', lab);
+ const cs = document.getElementById('filter-check-status').value;
+ if (cs) params.set('check_status', cs);
+ const st = document.getElementById('filter-status').value;
+ if (st) params.set('status', st);
+
+ try {
+  const r = await fetch(`${API_BASE}/equipments?${params}`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const data = await r.json();
+  renderTable(data.items || []);
+  renderPagination(data.total || 0, data.page, data.size);
+  document.getElementById('tab-count').textContent = data.total || 0;
+  document.getElementById('list-count').textContent = `共 ${data.total || 0} 条`;
+  renderAlertBanners(data.items || []);
+ } catch(e){ console.error(e); }
+}
+
+function renderTable(items){
+ const tbody = document.getElementById('equipment-tbody');
+ if (!items.length) {
+  tbody.innerHTML = `<tr><td colspan="13" class="empty-state"><div class="icon">&#128736;</div><p>暂无设备记录</p></td></tr>`;
+  return;
+ }
+ tbody.innerHTML = items.map(item => {
+  const statusClass = item.check_status === '超期' ? 'row-overdue' :
+                      item.check_status === '临期' ? 'row-warning' : 'row-normal';
+  const statusBadge = item.check_status === '超期' ? '<span class="badge" style="background:var(--danger);color:#fff">超期</span>' :
+                      item.check_status === '临期' ? '<span class="badge" style="background:var(--warn);color:#fff">临期</span>' :
+                      '<span class="badge" style="background:var(--success-bg);color:var(--success)">正常</span>';
+  const daysText = item.days_to_check !== null ? (item.days_to_check < 0 ? `${item.days_to_check}天` : `${item.days_to_check}天`) : '-';
+  const photoIcon = item.cert_photo ? `<a href="javascript:void(0)" onclick="viewPhoto('${item.cert_photo}')" title="查看证照">&#128444;</a>` : '';
+  return `<tr class="${statusClass}">
+   <td><strong>${escapeHtml(item.equipment_no)}</strong></td>
+   <td>${escapeHtml(item.equipment_name)} ${photoIcon}</td>
+   <td>${escapeHtml(item.equipment_type)}</td>
+   <td>${escapeHtml(item.category)}</td>
+   <td>${escapeHtml(item.lab)}</td>
+   <td>${escapeHtml(item.floor)}</td>
+   <td>${item.next_check_date || '-'}</td>
+   <td>${daysText}</td>
+   <td>${statusBadge}</td>
+   <td><span class="badge">${item.status || '在用'}</span></td>
+   <td>${escapeHtml(item.responsible_person)}</td>
+   <td>${escapeHtml(item.responsible_dept)}</td>
+   <td>
+    <button class="btn btn-ghost btn-xs" onclick="editEquipment(${item.id})">编辑</button>
+    ${currentUser?.role==='admin'?`<button class="btn btn-ghost btn-xs" style="color:var(--danger)" onclick="deleteEquipment(${item.id})">删除</button>`:''}
+   </td>
+  </tr>`;
+ }).join('');
+}
+
+function renderAlertBanners(items){
+ const container = document.getElementById('alert-banners');
+ const overdue = items.filter(i => i.check_status === '超期');
+ const warning = items.filter(i => i.check_status === '临期');
+ let html = '';
+ if (overdue.length > 0) {
+  html += `<div class="alert-banner alert-danger">
+   <span style="font-size:16px">&#9888;</span>
+   <span>有 <strong>${overdue.length}</strong> 台设备已超期未校验，请立即处理！</span>
+  </div>`;
+ }
+ if (warning.length > 0) {
+  html += `<div class="alert-banner alert-warn">
+   <span style="font-size:16px">&#9200;</span>
+   <span>有 <strong>${warning.length}</strong> 台设备即将到达校验日期（30天内），请提前安排！</span>
+  </div>`;
+ }
+ container.innerHTML = html;
+}
+
+function renderPagination(total, page, size){
+ const totalPages = Math.ceil(total / size) || 1;
+ const el = document.getElementById('pagination');
+ let html = `<button class="btn btn-outline btn-xs" onclick="currentPage=1;loadList()" ${page<=1?'disabled':''}>首页</button>`;
+ html += `<button class="btn btn-outline btn-xs" onclick="currentPage--;loadList()" ${page<=1?'disabled':''}>上一页</button>`;
+ html += `<span>${page} / ${totalPages}</span>`;
+ html += `<button class="btn btn-outline btn-xs" onclick="currentPage++;loadList()" ${page>=totalPages?'disabled':''}>下一页</button>`;
+ html += `<button class="btn btn-outline btn-xs" onclick="currentPage=${totalPages};loadList()" ${page>=totalPages?'disabled':''}>末页</button>`;
+ el.innerHTML = html;
+}
+
+function debounceSearch(){
+ clearTimeout(searchDebounce);
+ searchDebounce = setTimeout(() => { currentPage=1; loadList(); }, 300);
+}
+
+async function deleteEquipment(id){
+ if (!confirm('确定删除此设备记录？')) return;
+ try {
+  const r = await fetch(`${API_BASE}/equipments/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  if (r.ok) loadList();
+  else alert('删除失败');
+ } catch(e){ alert('网络错误'); }
+}
+
+function escapeHtml(text){
+ if (!text) return '';
+ return String(text).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   统计看板
+═══════════════════════════════════════════════════════════════ */
+async function loadStats(){
+ try {
+  const r = await fetch(`${API_BASE}/stats/summary`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const data = await r.json();
+  renderSummaryCards(data);
+  renderCharts(data);
+ } catch(e){ console.error(e); }
+}
+
+function renderSummaryCards(data){
+ const el = document.getElementById('stats-summary');
+ el.innerHTML = `
+  <div class="summary-card total">
+   <div class="icon">&#128736;</div>
+   <div class="num">${data.total || 0}</div>
+   <div class="lbl">设备总数</div>
+  </div>
+  <div class="summary-card special">
+   <div class="icon">&#9874;</div>
+   <div class="num">${data.special || 0}</div>
+   <div class="lbl">特种设备</div>
+  </div>
+  <div class="summary-card measure">
+   <div class="icon">&#128268;</div>
+   <div class="num">${data.measure || 0}</div>
+   <div class="lbl">计量设备</div>
+  </div>
+  <div class="summary-card overdue">
+   <div class="icon">&#9888;</div>
+   <div class="num">${data.overdue || 0}</div>
+   <div class="lbl">超期未校验</div>
+  </div>
+  <div class="summary-card warning">
+   <div class="icon">&#9200;</div>
+   <div class="num">${data.warning || 0}</div>
+   <div class="lbl">临期提醒</div>
+  </div>
+ `;
+}
+
+function renderCharts(data){
+ // 类别分布
+ const catLabels = Object.keys(data.category_stats || {});
+ const catValues = Object.values(data.category_stats || {});
+ const catCtx = document.getElementById('chart-category').getContext('2d');
+ if (chartCategory) chartCategory.destroy();
+ chartCategory = new Chart(catCtx, {
+  type: 'doughnut',
+  data: {
+   labels: catLabels,
+   datasets: [{ data: catValues, backgroundColor: ['#1d4ed8','#059669','#b45309','#dc2626','#7c3aed','#0e7490','#db2777'] }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+ });
+
+ // 实验室分布
+ const labLabels = Object.keys(data.lab_stats || {});
+ const labValues = Object.values(data.lab_stats || {});
+ const labCtx = document.getElementById('chart-lab').getContext('2d');
+ if (chartLab) chartLab.destroy();
+ chartLab = new Chart(labCtx, {
+  type: 'bar',
+  data: {
+   labels: labLabels,
+   datasets: [{ label: '设备数量', data: labValues, backgroundColor: '#3b82f6', borderRadius: 4 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+ });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Excel
+═══════════════════════════════════════════════════════════════ */
+function exportExcel(){
+ window.open(`${API_BASE}/excel/export/excel?token=${currentToken}`, '_blank');
+}
+function downloadTemplate(){
+ window.open(`${API_BASE}/excel/export/template?token=${currentToken}`, '_blank');
+}
+async function importExcel(input){
+ const file = input.files[0];
+ if (!file) return;
+ // 前端解析Excel并上传
+ const reader = new FileReader();
+ reader.onload = async function(e){
+  try {
+   // 使用简单的CSV方式或提示用户
+   alert('请使用导出模板填写后批量导入，当前功能需通过模板下载-填写-导入流程');
+  } catch(err){ alert('导入失败'); }
+ };
+ reader.readAsArrayBuffer(file);
+ input.value = '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   选项管理
+═══════════════════════════════════════════════════════════════ */
+function openOptionsManager(){
+ document.getElementById('dialog-options').classList.remove('hidden');
+ renderOptionsManager();
+}
+function closeOptionsManager(){ document.getElementById('dialog-options').classList.add('hidden'); }
+
+function renderOptionsManager(){
+ const container = document.getElementById('options-content');
+ const fieldNames = {
+  'equipment_type':'设备类型','category':'类别','lab':'实验室/区域','floor':'楼层',
+  'status':'设备状态','check_cycle':'校验周期'
+ };
+ let html = '';
+ Object.keys(fieldOptions).forEach(fn => {
+  const opts = fieldOptions[fn];
+  html += `<div class="opt-section"><h4>${fieldNames[fn] || fn}</h4><div class="opt-tags">`;
+  opts.forEach(o => {
+   html += `<span class="opt-tag">${escapeHtml(o.value)} <span class="del" onclick="deleteOption(${o.id},'${fn}')">&times;</span></span>`;
+  });
+  html += `</div><div class="opt-add"><input type="text" id="opt-add-${fn}" placeholder="新增选项" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px"><button class="btn btn-primary btn-xs" onclick="addOption('${fn}')">添加</button></div></div>`;
+ });
+ container.innerHTML = html;
+}
+
+async function addOption(fieldName){
+ const input = document.getElementById(`opt-add-${fieldName}`);
+ const value = input.value.trim();
+ if (!value) return;
+ try {
+  const r = await fetch(`${API_BASE}/options`, {
+   method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+   body: JSON.stringify({field_name:fieldName, value})
+  });
+  if (r.ok) { input.value = ''; await loadOptions(); initFilters(); renderOptionsManager(); }
+  else alert('添加失败');
+ } catch(e){ alert('网络错误'); }
+}
+async function deleteOption(id, fieldName){
+ if (!confirm('确定删除此选项？')) return;
+ try {
+  const r = await fetch(`${API_BASE}/options/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  if (r.ok) { await loadOptions(); initFilters(); renderOptionsManager(); }
+  else alert('删除失败');
+ } catch(e){ alert('网络错误'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   用户管理
+═══════════════════════════════════════════════════════════════ */
+function openUserManager(){
+ document.getElementById('dialog-users').classList.remove('hidden');
+ loadUsers();
+}
+function closeUserManager(){ document.getElementById('dialog-users').classList.add('hidden'); }
+
+async function loadUsers(){
+ try {
+  const r = await fetch(`${API_BASE}/auth/users`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const users = await r.json();
+  const container = document.getElementById('users-content');
+  container.innerHTML = '<table style="width:100%"><thead><tr><th>用户名</th><th>显示名</th><th>角色</th><th>操作</th></tr></thead><tbody>' +
+   users.map(u => `<tr><td>${escapeHtml(u.username)}</td><td>${escapeHtml(u.display_name)}</td><td>${u.role}</td><td>${u.username==='protector'?'':`<button class="btn btn-danger btn-xs" onclick="deleteUser(${u.id})">删除</button>`}</td></tr>`).join('') +
+   '</tbody></table>';
+ } catch(e){}
+}
+
+async function deleteUser(id){
+ if (!confirm('确定删除此用户？')) return;
+ try {
+  const r = await fetch(`${API_BASE}/auth/users/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  if (r.ok) loadUsers(); else alert('删除失败');
+ } catch(e){ alert('网络错误'); }
+}
+
+function showRegisterForm(){
+ const username = prompt('用户名:'); if (!username) return;
+ const password = prompt('密码:'); if (!password) return;
+ const role = confirm('是否设为管理员？') ? 'admin' : 'user';
+ fetch(`${API_BASE}/auth/register`, {
+  method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+  body: JSON.stringify({username, password, role})
+ }).then(r => { if (r.ok) { alert('注册成功'); loadUsers(); } else alert('注册失败'); });
+}
+
+/* ── 样式补充 ── */
+</script>
+<style>
+.opt-section{margin-bottom:24px}
+.opt-section h4{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-secondary);letter-spacing:.2px}
+.opt-tags{display:flex;flex-wrap:wrap;gap:8px}
+.opt-tag{
+ display:inline-flex;align-items:center;gap:5px;padding:5px 12px;
+ background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);
+ font-size:12px;transition:all .2s var(--ease-out);font-weight:500
+}
+.opt-tag:hover{border-color:var(--primary-border);background:var(--primary-bg)}
+.opt-tag .del{
+ cursor:pointer;color:var(--text-tertiary);font-weight:bold;margin-left:2px;
+ width:20px;height:20px;display:flex;align-items:center;justify-content:center;
+ border-radius:50%;font-size:11px;transition:all .15s
+}
+.opt-tag .del:hover{background:var(--danger-bg);color:var(--danger)}
+.opt-add{display:flex;gap:8px;margin-top:14px}
+</style>
+
+</body>
+</html>
+let auditDebounceTimer = null;
+
+function debounceAudit() {
+ clearTimeout(auditDebounceTimer);
+ auditDebounceTimer = setTimeout(() => { auditPage=1; loadAuditLogs(); }, 400);
+}
+
+async function loadAuditLogs() {
+ const action = document.getElementById('audit-filter-action').value;
+ const user = document.getElementById('audit-filter-user').value.trim();
+ const start = document.getElementById('audit-filter-start').value;
+ const end = document.getElementById('audit-filter-end').value;
+
+ const params = new URLSearchParams();
+ params.set('page', auditPage);
+ params.set('size', 30);
+ if (action) params.set('action', action);
+ if (user) params.set('username', user);
+ if (start) params.set('start_date', start);
+ if (end) params.set('end_date', end);
+
+ try {
+  const r = await fetch(`${API_BASE}/audit?${params}`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail);
+
+  document.getElementById('audit-count').textContent = `共 ${data.total} 条`;
+  const tbody = document.getElementById('audit-tbody');
+  if (!data.items || data.items.length === 0) {
+   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-tertiary)">暂无审计日志</td></tr>';
+   document.getElementById('audit-pagination').innerHTML = '';
+   return;
+  }
+
+  const actionLabels = {create:'新增', update:'修改', delete:'删除', login:'登录', logout:'登出', upload:'上传'};
+  tbody.innerHTML = data.items.map(log => {
+   const time = new Date(log.created_at).toLocaleString('zh-CN', {hour12:false});
+   const act = actionLabels[log.action] || log.action;
+   const userDisp = log.display_name || log.username || '-';
+   let detail = log.target_name || log.detail || '-';
+   if (log.action === 'update' && log.target_name) {
+    detail = `${log.target_name}（${log.target_id}）`;
+   } else if (log.action === 'create' && log.target_name) {
+    detail = `${log.target_name}`;
+   } else if (log.action === 'delete' && log.target_name) {
+    detail = `${log.target_name}`;
+   }
+   const targetType = log.target_type;
+   return `<tr>
+    <td style="white-space:nowrap">${time}</td>
+    <td>${userDisp}</td>
+    <td><span class="status-badge badge-${log.action}">${act}</span></td>
+    <td style="font-size:12px;color:var(--text-secondary)">${targetType}</td>
+    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${detail}</td>
+   </tr>`;
+  }).join('');
+
+  // Pagination
+  const totalPages = Math.ceil(data.total / 30);
+  const pag = document.getElementById('audit-pagination');
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+  let html = '';
+  if (auditPage > 1) html += `<button class="page-btn" onclick="auditPage=1;loadAuditLogs()">首页</button><button class="page-btn" onclick="auditPage--;loadAuditLogs()">上一页</button>`;
+  html += `<span class="page-info">第 ${auditPage}/${totalPages} 页</span>`;
+  if (auditPage < totalPages) html += `<button class="page-btn" onclick="auditPage++;loadAuditLogs()">下一页</button><button class="page-btn" onclick="auditPage=${totalPages};loadAuditLogs()">末页</button>`;
+  pag.innerHTML = html;
+ } catch(e) {
+  document.getElementById('audit-tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--danger)">加载失败: ${e.message}</td></tr>`;
+ }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EHS → WeLink 推送测试</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 { font-size: 24px; color: #1a1a2e; margin-bottom: 8px; text-align: center; }
+    .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 30px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type="text"], textarea { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; transition: border-color 0.2s; }
+    input:focus, textarea:focus { outline: none; border-color: #667eea; }
+    textarea { resize: vertical; min-height: 80px; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result { margin-top: 20px; padding: 14px; border-radius: 10px; font-size: 13px; line-height: 1.6; word-break: break-all; }
+    .result.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .result.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .result.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .tip { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 10px 14px; border-radius: 8px; font-size: 12px; margin-bottom: 20px; line-height: 1.5; }
+    .debug { font-family: "Consolas", "Monaco", monospace; background: #f5f5f5; padding: 8px; border-radius: 6px; font-size: 11px; color: #555; margin-top: 8px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚀 WeLink 推送测试</h1>
+    <p class="subtitle">EHS 安全联锁系统 → WeLink 群机器人</p>
+    <div class="tip">
+      💡 <strong>纯前端直连</strong>：浏览器直接请求 WeLink 接口，无需后端。<br>
+      如遇 <strong>CORS 错误</strong>，说明浏览器安全策略拦截，请换后端方式。<br>
+      <strong>调试</strong>：按 F12 → Console 查看详细日志。
+    </div>
+    <div class="form-group">
+      <label>Webhook Token</label>
+      <input type="text" id="token" placeholder="粘贴完整 token（fc49bc…5f5d）">
+    </div>
+    <div class="form-group">
+      <label>消息内容</label>
+      <textarea id="content">【EHS测试】来自公司电脑的测试消息 🧪</textarea>
+    </div>
+    <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()">发送测试消息</button>
+    <div id="result"></div>
+    <div id="debugLog" class="debug" style="display:none"></div>
+  </div>
+
+  <script>
+    // 兼容 crypto.randomUUID（旧浏览器没有）
+    function genUUID() {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID().replace(/-/g, '');
+      }
+      // fallback
+      return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    function log(msg) {
+      console.log('[WeLink]', msg);
+      var el = document.getElementById('debugLog');
+      if (el) {
+        el.style.display = 'block';
+        el.textContent += msg + '\n';
+      }
+    }
+
+    function showResult(type, html) {
+      var el = document.getElementById('result');
+      el.className = 'result ' + type;
+      el.innerHTML = html;
+    }
+
+    async function sendMessage() {
+      log('=== 开始发送 ===');
+      var btn = document.getElementById('sendBtn');
+      var token = document.getElementById('token').value.trim();
+      var content = document.getElementById('content').value.trim();
+
+      if (!token) {
+        showResult('error', '❌ 请填写 Webhook Token（从 WeLink 群机器人设置里复制完整 token）');
+        log('错误：token 为空');
+        return;
+      }
+      if (!content) content = '【EHS测试】来自公司电脑的测试消息';
+
+      btn.disabled = true;
+      btn.textContent = '发送中...';
+      document.getElementById('result').className = '';
+      document.getElementById('result').innerHTML = '';
+
+      try {
+        log('获取公网IP...');
+        var ip = 'unknown';
+        try {
+          var ipResp = await fetch('https://api.ipify.org?format=json', { timeout: 3000 });
+          var ipData = await ipResp.json();
+          ip = ipData.ip;
+          log('IP: ' + ip);
+        } catch(e) {
+          log('获取IP失败: ' + e.message);
+        }
+
+        var fullContent = content + '\n时间：' + new Date().toLocaleString('zh-CN') + '\n发送IP：' + ip;
+        log('消息长度: ' + fullContent.length);
+
+        var body = {
+          messageType: 'text',
+          content: { text: fullContent },
+          timeStamp: Date.now(),
+          uuid: genUUID(),
+          isAt: false,
+          isAtAll: false
+        };
+        log('UUID: ' + body.uuid);
+        log('Timestamp: ' + body.timeStamp);
+
+        var url = 'https://open.welink.huaweicloud.com/api/werobot/v1/webhook/send?token=' + encodeURIComponent(token) + '&channel=standard';
+        log('请求URL: ' + url.slice(0, 80) + '...');
+
+        log('发送 fetch...');
+        var resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+          body: JSON.stringify(body)
+        });
+        log('收到响应，status: ' + resp.status);
+
+        var data = await resp.json();
+        log('响应JSON: ' + JSON.stringify(data));
+
+        if (data.code === '0') {
+          showResult('success', '✅ 发送成功！<br><br>返回：' + JSON.stringify(data));
+        } else if (data.code === '58404') {
+          showResult('error', '❌ 机器人资源不存在 (58404)<br>检查 token 是否正确完整。');
+        } else if (data.code === '58601') {
+          showResult('error', '❌ 参数错误 (58601)<br>' + (data.message || '') + '<br><br>完整返回：' + JSON.stringify(data));
+        } else if (data.code === '58602') {
+          showResult('error', '❌ 机器人未启用 (58602)<br>请检查 WeLink 群机器人状态。');
+        } else {
+          showResult('error', '⚠️ 未知错误<br>Code: ' + data.code + '<br>Message: ' + (data.message || '') + '<br><br>完整返回：' + JSON.stringify(data));
+        }
+      } catch (err) {
+        log('CATCH 错误: ' + err.name + ' - ' + err.message);
+        if (err.name === 'TypeError') {
+          showResult('error',
+            '❌ 网络/CORS 错误<br><br>' +
+            '浏览器无法连接到 WeLink，可能原因：<br>' +
+            '1. 公司防火墙限制了该域名<br>' +
+            '2. 浏览器 CORS 安全策略拦截（WeLink 未开放跨域）<br>' +
+            '3. 网络不通<br><br>' +
+            '<strong>建议</strong>：按 F12 → Console 查看详细错误，或换后端代理方式。<br><br>' +
+            '原始错误：' + err.message
+          );
+        } else {
+          showResult('error', '❌ 发送失败<br>' + err.name + ': ' + err.message);
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '发送测试消息';
+        log('=== 发送结束 ===');
+      }
+    }
+
+    // 页面加载时打印环境信息
+    log('浏览器: ' + navigator.userAgent.slice(0, 60));
+    log('crypto.randomUUID: ' + (typeof crypto !== 'undefined' && crypto.randomUUID ? '支持' : '不支持（用fallback）'));
+  </script>
+</body>
+</html>

@@ -368,27 +368,28 @@ td.cell-desc{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:
  <input type="text" id="f-incident-no" readonly placeholder="自动生成">
  </div>
  <div class="form-group required"><label>异常类型</label>
- <input type="text" id="f-incident-type" placeholder="请输入异常类型">
+ <select id="f-incident-type" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-incident-type-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group required"><label>事件等级</label>
- <select id="f-event-level">
- <option value=""></option>
- <option value="High">High</option>
- <option value="Medium">Medium</option>
- <option value="Low">Low</option>
- </select>
+ <select id="f-event-level" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-event-level-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group required"><label>实验室</label>
- <input type="text" id="f-lab" placeholder="请输入实验室">
+ <select id="f-lab" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-lab-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group"><label>版本</label>
- <input type="text" id="f-version" placeholder="请输入版本">
+ <select id="f-version" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-version-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group"><label>子系统</label>
- <input type="text" id="f-subsystem" placeholder="请输入子系统">
+ <select id="f-subsystem" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-subsystem-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group"><label>设备名称</label>
- <input type="text" id="f-device-name" placeholder="请输入设备名称">
+ <select id="f-device-name" onchange="otherChanged(this)"><option value=""></option></select>
+ <input type="text" id="f-device-name-other" placeholder="手动填写" class="hidden" style="margin-top:4px">
  </div>
  <div class="form-group required span-3"><label>异常描述</label>
  <textarea id="f-description" placeholder="详细描述异常事件情况…" rows="3"></textarea>
@@ -401,7 +402,7 @@ td.cell-desc{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:
  </select>
  </div>
  <div class="form-group required"><label>报告人</label><input type="text" id="f-reporter" placeholder="姓名"></div>
- <div class="form-group required"><label>报告日期</label><input type="text" id="f-report-date" readonly></div>
+ <div class="form-group required"><label>报告日期</label><input type="date" id="f-report-date"></div>
  <div class="form-group"><label>复盘日期</label><input type="text" id="f-review-date" placeholder="YYYY-MM-DD"></div>
  <div class="form-group span-3">
  <label>复盘报告</label>
@@ -636,10 +637,8 @@ async function apiFetch(url, opts) {
  }
  const r = await fetch(url, opts);
  if (r.status === 401) {
- localStorage.removeItem('token');
- currentUser = null; userRole = '';
- showLoginView();
- throw new Error('登录已过期，请重新登录');
+ // 不立即弹登录，只抛错。只有 init() 调 /auth/me 才决定是否清 token
+ throw new Error('请求失败（401），请重试');
  }
  return r;
 }
@@ -768,6 +767,24 @@ async function loadFilterOptions() {
  });
  sel.value = currentVal;
  }
+ // 填充表单中的 select 选项
+ const formFields = ['incident_type', 'event_level', 'lab', 'version', 'subsystem', 'device_name'];
+ const formMaps = { incident_type: 'f-incident-type', event_level: 'f-event-level', lab: 'f-lab', version: 'f-version', subsystem: 'f-subsystem', device_name: 'f-device-name' };
+ for (const field of formFields) {
+ const el = document.getElementById(formMaps[field]);
+ if (!el || el.tagName !== 'SELECT') continue;
+ const currentVal = el.value;
+ el.innerHTML = '<option value=""></option>' +
+ (allOptions[field] || []).map(v => `<option value="${v}">${v}</option>`).join('') +
+ '<option value="__other__" style="color:var(--primary);font-style:italic"> 其他（手动填写）</option>';
+ el.value = currentVal;
+ // 同步 other input 显隐
+ const other = document.getElementById(formMaps[field] + '-other');
+ if (other) {
+ other.classList.add('hidden');
+ other.value = '';
+ }
+ }
  } catch (e) {
  console.error('加载筛选选项失败', e);
  }
@@ -845,6 +862,24 @@ function showToast(msg, isError) {
  t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(8px)';
  setTimeout(() => t.remove(), 300);
  }, 3000);
+}
+
+function otherChanged(sel) {
+ const otherInput = document.getElementById(sel.id + '-other');
+ if (sel.value === '__other__') {
+ otherInput.classList.remove('hidden');
+ otherInput.focus();
+ sel.value = '';
+ } else {
+ if (otherInput) otherInput.classList.add('hidden');
+ }
+}
+
+function getFieldValue(fieldName) {
+ const sel = document.getElementById('f-' + fieldName.replace(/_/g, '-'));
+ const other = document.getElementById('f-' + fieldName.replace(/_/g, '-') + '-other');
+ if (sel && other && !other.classList.contains('hidden')) return other.value;
+ return sel ? sel.value : '';
 }
 
 // 清单
@@ -927,6 +962,8 @@ function switchTab(tab) {
  ['f-incident-type','f-event-level','f-lab','f-version','f-subsystem','f-device-name','f-description','f-reporter','f-review-date'].forEach(id => {
  const el = document.getElementById(id);
  if (el) el.value = '';
+ const o = document.getElementById(id+'-other');
+ if(o) { o.value = ''; o.classList.add('hidden'); }
  });
  document.getElementById('f-report-date').value = new Date().toISOString().split('T')[0];
  document.getElementById('f-status').value = '待复盘';
@@ -994,7 +1031,34 @@ async function editIncident(id) {
  document.getElementById('f-incident-no').value = h.incident_no;
  document.getElementById('form-title').innerHTML = '编辑异常事件 #' + h.incident_no;
 
- ['incident_type','event_level','lab','version','subsystem','device_name','description','status','reporter','report_date','review_date'].forEach(fn => {
+ // 先加载选项，确保 select 有内容
+ await loadFilterOptions();
+
+ // 设置各字段值（处理"其他"情况）
+ const setField = (fn, val) => {
+ const sel = document.getElementById('f-' + fn.replace(/_/g, '-'));
+ const other = document.getElementById('f-' + fn.replace(/_/g, '-') + '-other');
+ if (!sel) return;
+ // 检查值是否在选项中
+ const opts = Array.from(sel.options).map(o => o.value).filter(v => v && v !== '__other__');
+ if (val && opts.includes(val)) {
+ sel.value = val;
+ if (other) other.classList.add('hidden');
+ } else if (val && other) {
+ sel.value = '__other__';
+ other.value = val;
+ other.classList.remove('hidden');
+ } else {
+ sel.value = '';
+ if (other) { other.value = ''; other.classList.add('hidden'); }
+ }
+ };
+
+ ['incident_type','event_level','lab','version','subsystem','device_name'].forEach(fn => {
+ setField(fn, h[fn] || '');
+ });
+
+ ['description','status','reporter','report_date','review_date'].forEach(fn => {
  const el = document.getElementById('f-' + fn.replace(/_/g, '-'));
  if (el) el.value = h[fn] || '';
  });
@@ -1015,12 +1079,12 @@ async function submitForm(e) {
  const editId = document.getElementById('edit-id').value;
  const data = {
  incident_no: document.getElementById('f-incident-no').value || '',
- incident_type: document.getElementById('f-incident-type').value,
- event_level: document.getElementById('f-event-level').value,
- lab: document.getElementById('f-lab').value,
- version: document.getElementById('f-version').value,
- subsystem: document.getElementById('f-subsystem').value,
- device_name: document.getElementById('f-device-name').value,
+ incident_type: getFieldValue('incident_type'),
+ event_level: getFieldValue('event_level'),
+ lab: getFieldValue('lab'),
+ version: getFieldValue('version'),
+ subsystem: getFieldValue('subsystem'),
+ device_name: getFieldValue('device_name'),
  description: document.getElementById('f-description').value,
  status: document.getElementById('f-status').value,
  reporter: document.getElementById('f-reporter').value,

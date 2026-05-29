@@ -13,6 +13,7 @@
       --safety-green: #16a34a; --safety-green-dim: rgba(22,163,74,.08);
       --danger-red: #dc2626; --danger-red-dim: rgba(220,38,38,.08);
       --electric-blue: #3b82f6; --electric-blue-dim: rgba(59,130,246,.08);
+      --teal: #0d9488; --teal-dim: rgba(13,148,136,.08);
       --purple: #7c3aed; --purple-dim: rgba(124,58,237,.08);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -27,24 +28,24 @@
     .header p { font-size: 14px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.7; }
     .divider { width: 120px; height: 2px; background: linear-gradient(90deg,transparent,var(--alert-orange),transparent); margin: 0 auto 32px; }
 
-    .modules { display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; max-width: 1200px; margin: 0 auto; padding: 0 24px 36px; }
-    .module-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--text-secondary); transition: all .25s; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    .modules { display: grid; grid-template-columns: repeat(6,1fr); gap: 18px; max-width: 1440px; margin: 0 auto; padding: 0 32px 40px; }
+    .module-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--text-secondary); transition: all .25s; position: relative; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); display: flex; flex-direction: column; }
     .module-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent-color); opacity: .8; }
     .module-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.1); border-color: var(--accent-color); }
-    .module-card.loto{--accent-color:var(--alert-orange)}.module-card.shield{--accent-color:var(--danger-red)}.module-card.hazard{--accent-color:var(--safety-green)}.module-card.incident{--accent-color:var(--electric-blue)}.module-card.docs{--accent-color:var(--purple)}
-    .module-header { padding: 16px 16px 10px; display: flex; align-items: flex-start; gap: 10px; }
-    .module-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .module-card.loto .module-icon{background:var(--alert-orange-dim)}.module-card.shield .module-icon{background:var(--danger-red-dim)}.module-card.hazard .module-icon{background:var(--safety-green-dim)}.module-card.incident .module-icon{background:var(--electric-blue-dim)}.module-card.docs .module-icon{background:var(--purple-dim)}
-    .module-icon svg{width:18px;height:18px;stroke:var(--accent-color);stroke-width:1.8;fill:none}
-    .module-title h2{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-    .module-title .en{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
-    .module-body{padding:0 16px 14px;font-size:11px;line-height:1.6;color:var(--text-secondary)}
-    .module-footer{padding:8px 16px;background:#f9fafb;border-top:1px solid var(--border-light);border-radius:0 0 8px 8px;display:flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-color)}
+    .module-card.loto{--accent-color:var(--alert-orange)}.module-card.shield{--accent-color:var(--danger-red)}.module-card.hazard{--accent-color:var(--safety-green)}.module-card.incident{--accent-color:var(--electric-blue)}.module-card.equipment{--accent-color:var(--teal)}.module-card.docs{--accent-color:var(--purple)}
+    .module-header { padding: 20px 20px 12px; display: flex; align-items: flex-start; gap: 12px; }
+    .module-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .module-card.loto .module-icon{background:var(--alert-orange-dim)}.module-card.shield .module-icon{background:var(--danger-red-dim)}.module-card.hazard .module-icon{background:var(--safety-green-dim)}.module-card.incident .module-icon{background:var(--electric-blue-dim)}.module-card.equipment .module-icon{background:var(--teal-dim)}.module-card.docs .module-icon{background:var(--purple-dim)}
+    .module-icon svg{width:20px;height:20px;stroke:var(--accent-color);stroke-width:1.8;fill:none}
+    .module-title h2{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+    .module-title .en{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+    .module-body{padding:0 20px 16px;font-size:12px;line-height:1.6;color:var(--text-secondary);min-height:40px;flex:1 1 auto}
+    .module-footer{padding:10px 20px;background:#f9fafb;border-top:1px solid var(--border-light);border-radius:0 0 8px 8px;display:flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-color)}
     .module-footer .arrow{margin-left:auto;transition:transform .2s}
     .module-card:hover .arrow{transform:translateX(4px)}
 
     /* 看板 */
-    .dashboard { max-width: 1200px; margin: 0 auto; padding: 0 24px 48px; }
+    .dashboard { max-width: 1440px; margin: 0 auto; padding: 0 32px 48px; }
     .dashboard-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     .dashboard-title::before { content: ''; width: 4px; height: 18px; background: var(--alert-orange); border-radius: 2px; }
     .stat-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 16px; margin-bottom: 24px; }
@@ -100,7 +101,7 @@
 
     .footer { text-align: center; padding: 24px; color: var(--text-muted); font-size: 11px; font-family: 'JetBrains Mono',monospace; letter-spacing: 1px; border-top: 1px solid var(--border); }
 
-    @media(max-width:1100px){.modules{grid-template-columns:repeat(3,1fr)}.charts-row{grid-template-columns:1fr}}
+    @media(max-width:1280px){.modules{grid-template-columns:repeat(3,1fr)}.charts-row{grid-template-columns:1fr}}
     @media(max-width:768px){.header h1{font-size:26px}.modules{grid-template-columns:repeat(2,1fr)}.stat-cards{grid-template-columns:1fr}}
     @media(max-width:480px){.modules{grid-template-columns:1fr}}
   </style>
@@ -113,7 +114,7 @@
   <div class="header">
     <div class="system-id">Industrial Safety Management System</div>
     <h1>EHS 安全管理平台</h1>
-    <p>LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录</p>
+    <p>LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录 / 特种设备&计量设备管理</p>
   </div>
   <div class="divider"></div>
 
@@ -122,6 +123,7 @@
     <a href="/shield/" class="module-card shield"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div class="module-title"><h2>安全联锁屏蔽</h2><div class="en">Safety Shield</div></div></div><div class="module-body">屏蔽作业管理，支持申请审批、冲突检测、台账追踪。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
     <a href="/hazard/" class="module-card hazard"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-6 3 4 4-6"/></svg></div><div class="module-title"><h2>隐患风险管控</h2><div class="en">Hazard Control</div></div></div><div class="module-body">隐患全生命周期管理，风险分级、整改闭环、BI 分析。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
     <a href="/incident/" class="module-card incident"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg></div><div class="module-title"><h2>异常事件记录</h2><div class="en">Incident</div></div></div><div class="module-body">异常事件记录与复盘，支持事件分级、报告上传、BI 分析。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
+    <a href="/equipment/" class="module-card equipment"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M20 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><path d="M12 17v4"/><path d="M8 21h8"/></svg></div><div class="module-title"><h2>特种&计量设备</h2><div class="en">Equipment</div></div></div><div class="module-body">设备台账管理，临期校验提醒、超期未校验标红，支持证照上传。</div><div class="module-footer">进入系统 <span class="arrow">&rarr;</span></div></a>
     <a href="http://10.29.113.101:8090/files" class="module-card docs" target="_blank"><div class="module-header"><div class="module-icon"><svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div><div class="module-title"><h2>EHS 公档</h2><div class="en">Documents</div></div></div><div class="module-body">公共文档资料库，文件上传下载、在线预览、共享协作。</div><div class="module-footer">打开文档库 <span class="arrow">&rarr;</span></div></a>
   </div>
 
@@ -147,6 +149,11 @@
         <div class="card-top"><span class="card-label">异常事件统计</span></div>
         <div class="num" id="s-incident-total">-</div>
         <div class="sub">复盘率 <span id="s-incident-rate" style="color:var(--electric-blue)">-</span></div>
+      </div>
+      <div class="stat-card" style="--accent-color:var(--teal)">
+        <div class="card-top"><span class="card-label">设备台账</span></div>
+        <div class="num" id="s-equipment-total" style="color:var(--teal)">-</div>
+        <div class="sub">超期 <span id="s-equipment-overdue" style="color:var(--danger-red);font-weight:700">-</span> · 临期 <span id="s-equipment-warning" style="color:var(--alert-orange);font-weight:700">-</span></div>
       </div>
     </div>
 
@@ -360,8 +367,21 @@
     }
   }
 
+  async function loadEquipmentStats() {
+    try {
+      const token = localStorage.getItem('equipment_token');
+      const opts = token ? { headers: { 'Authorization': '***' + token } } : {};
+      const r = await fetch('/api/equipment/stats/summary', opts);
+      if (!r.ok) throw new Error(r.status);
+      const s = await r.json();
+      document.getElementById('s-equipment-total').textContent = s.total || 0;
+      document.getElementById('s-equipment-overdue').textContent = s.overdue || 0;
+      document.getElementById('s-equipment-warning').textContent = s.warning || 0;
+    } catch(e) {}
+  }
+
   async function loadDashboard() {
-    loadLoto(); loadShield(); loadSchedule();
+    loadLoto(); loadShield(); loadSchedule(); loadEquipmentStats();
     try {
       const s = await fetchJson('/api/hazard/stats/summary');
       document.getElementById('s-hazard-total').textContent = s.total || 0;

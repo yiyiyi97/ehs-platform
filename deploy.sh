@@ -52,24 +52,31 @@ ssh "$SERVER" bash <<'EOF'
   # 数据目录
   mkdir -p data uploads shield_backend/uploads
 
-  # systemd 服务
-  cat > /etc/systemd/system/ehs-dashboard.service <<'EOFSVC'
+  # systemd 服务（带复盘报告路径环境变量）
+  REGION_NAME="深圳"
+  if echo "$REMOTE_DIR" | grep -q "wuhan"; then REGION_NAME="武汉"; fi
+  if echo "$REMOTE_DIR" | grep -q "beijing"; then REGION_NAME="北京"; fi
+  if echo "$REMOTE_DIR" | grep -q "shanghai"; then REGION_NAME="上海"; fi
+
+  cat > /etc/systemd/system/ehs-dashboard${PORT:+-$PORT}.service <<EOFSVC
 [Unit]
 Description=EHS Dashboard
 After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/EHS_Dashboard/backend
-Environment="PATH=/root/EHS_Dashboard/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-ExecStart=/root/EHS_Dashboard/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
+WorkingDirectory=$REMOTE_DIR/backend
+Environment="PATH=$REMOTE_DIR/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="EHS_REPORT_BASE=/root/EHS_docs/documents/异常事件复盘"
+Environment="EHS_REGION=$REGION_NAME"
+ExecStart=$REMOTE_DIR/.venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT
 Restart=always
 RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOFSVC
   systemctl daemon-reload
-  systemctl enable ehs-dashboard.service 2>/dev/null || true
+  systemctl enable ehs-dashboard${PORT:+-$PORT}.service 2>/dev/null || true
 EOF
 
 # ── 3. 启动 ──

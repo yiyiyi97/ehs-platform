@@ -52,3 +52,23 @@ class Option(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        # Seed default options
+        if db.query(Option).count() == 0:
+            defaults = [
+                ("event_level", "High"), ("event_level", "Medium"), ("event_level", "Low"),
+                ("incident_type", "电气"), ("incident_type", "水"), ("incident_type", "气体"),
+                ("incident_type", "机械"), ("incident_type", "激光"), ("incident_type", "其他"),
+                ("lab", "L1"), ("lab", "L2"), ("lab", "L3"),
+                ("version", "V1"), ("version", "V2"), ("version", "V3"),
+                ("subsystem", "扩散"), ("subsystem", "薄膜"), ("subsystem", "光刻"),
+                ("subsystem", "蚀刻"), ("subsystem", "离子注入"), ("subsystem", "其他"),
+                ("device_name", "设备A"), ("device_name", "设备B"), ("device_name", "设备C"),
+                ("status", "待复盘"), ("status", "已复盘"), ("status", "措施已落实"),
+            ]
+            for fn, val in defaults:
+                db.add(Option(field_name=fn, value=val))
+            db.commit()
+    finally:
+        db.close()
