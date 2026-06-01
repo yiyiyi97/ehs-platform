@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EHS 特种设备&计量设备管理平台</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 /* ── 设计系统 ── */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -121,6 +122,12 @@ tr.row-warning:hover td{background:#fde68a !important}
 
 /* 正常 */
 tr.row-normal td .badge{background:var(--success-bg);color:var(--success);border-color:#bbf7d0}
+
+/* 停用/报废 灰色 */
+tr.row-inactive td{background:#f8fafc !important;color:var(--text-tertiary) !important}
+tr.row-inactive td .badge{background:#e2e8f0;color:var(--text-tertiary);border-color:#cbd5e1}
+tr.row-inactive:hover td{background:#f1f5f9 !important}
+tr.row-inactive td strong{color:var(--text-tertiary)}
 
 td a{color:var(--primary);text-decoration:none;font-weight:500;transition:opacity .15s}
 td a:hover{opacity:.75}
@@ -337,10 +344,20 @@ td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:
  <span class="list-count" id="list-count">加载中…</span>
  </div>
 
+ <div class="batch-toolbar" id="batch-toolbar" style="display:none;margin-bottom:12px;padding:10px 16px;background:#fff;border-radius:var(--radius-sm);border:1px solid var(--border);align-items:center;gap:12px">
+  <span id="batch-count" style="font-size:13px;color:var(--text-secondary);font-weight:500">已选 0 项</span>
+  <button class="btn btn-primary btn-xs" onclick="openBatchCheckDateDialog()">刷新校验日期</button>
+  <button class="btn btn-ghost btn-xs" style="color:var(--warn)" onclick="batchSetStatus('停用')">批量停用</button>
+  <button class="btn btn-ghost btn-xs" style="color:var(--danger)" onclick="batchSetStatus('报废')">批量报废</button>
+  <button class="btn btn-ghost btn-xs" style="color:var(--danger)" onclick="batchDelete()">批量删除</button>
+  <button class="btn btn-ghost btn-xs" style="margin-left:auto" onclick="clearBatchSelection()">取消选择</button>
+ </div>
+
  <div class="table-wrap">
  <table id="equipment-table">
  <thead>
  <tr>
+ <th style="width:36px"><input type="checkbox" id="batch-select-all" onclick="toggleSelectAll()"></th>
  <th>设备编号</th><th>设备名称</th><th>类型</th><th>类别</th><th>实验室</th><th>楼层</th>
  <th>下次校验</th><th>剩余天数</th><th>校验状态</th><th>设备状态</th>
  <th>责任人</th><th>责任部门</th><th>操作</th>
@@ -393,7 +410,7 @@ td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:
  <div class="form-group"><label>下次校验日期</label><input type="date" id="f-next-check-date" readonly style="background:#f1f5f9"></div>
  <div class="form-group"><label>证书编号</label><input type="text" id="f-cert-no" placeholder="校验证书编号"></div>
  <div class="form-group span-3">
- <label>特种设备证照</label>
+ <label>特种设备证照或计量检测报告</label>
  <div class="photo-preview" id="photo-preview">
  <div class="photo-upload-btn" onclick="document.getElementById('photo-upload').click()">
  <span style="font-size:24px">+</span>
@@ -464,8 +481,38 @@ td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:
 <!-- ════════════════ 图片预览弹窗 ════════════════ -->
 <div id="dialog-photo" class="hidden">
 <div class="dialog-overlay" onclick="if(event.target===this)closePhotoViewer()">
-<div class="dialog" style="max-width:800px;padding:16px">
-<img id="photo-viewer-img" style="width:100%;border-radius:var(--radius-xs)" src="" alt="证照预览">
+<div class="dialog" style="max-width:800px;padding:16px;position:relative">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+<span style="font-size:14px;font-weight:600;color:var(--text-primary)">证照预览</span>
+<div style="display:flex;gap:8px">
+<a id="photo-download-link" href="" download style="padding:6px 14px;background:var(--primary);color:#fff;border-radius:6px;font-size:13px;text-decoration:none;font-weight:500">下载</a>
+<button onclick="closePhotoViewer()" style="padding:6px 14px;background:var(--border);color:var(--text-primary);border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:500">关闭</button>
+</div>
+</div>
+<img id="photo-viewer-img" style="width:100%;border-radius:var(--radius-xs);max-height:70vh;object-fit:contain" src="" alt="证照预览">
+</div>
+</div>
+</div>
+
+<!-- ════════════════ 批量刷新校验日期弹窗 ════════════════ -->
+<div id="dialog-batch-check-date" class="hidden">
+<div class="dialog-overlay" onclick="if(event.target===this)closeBatchCheckDateDialog()">
+<div class="dialog" style="max-width:420px">
+<div class="dialog-header">
+<h3>批量刷新校验日期</h3>
+<button class="dialog-close" onclick="closeBatchCheckDateDialog()">&times;</button>
+</div>
+<div style="padding:16px 24px">
+<p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">选中的 <strong id="batch-check-date-count">0</strong> 台设备将更新上次校验日期，并自动计算下次校验日期。</p>
+<div class="form-group">
+<label>新的上次校验日期</label>
+<input type="date" id="batch-check-date-input">
+</div>
+</div>
+<div class="dialog-footer">
+<button class="btn btn-secondary" onclick="closeBatchCheckDateDialog()">取消</button>
+<button class="btn btn-primary" onclick="batchUpdateCheckDate()">确认更新</button>
+</div>
 </div>
 </div>
 </div>
@@ -476,7 +523,7 @@ td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:
 ═══════════════════════════════════════════════════════════════ */
 const API_BASE = '/api/equipment';
 let currentUser = null;
-let currentToken = localStorage.getItem('equipment_token') || '';
+let currentToken = localStorage.getItem('token') || '';
 let currentPage = 1;
 let pageSize = 50;
 let currentTab = 'list';
@@ -487,13 +534,28 @@ let searchDebounce = null;
 let chartCategory = null;
 let chartLab = null;
 
+// API 请求封装（统一添加 Bearer token）
+async function apiFetch(url, opts) {
+ opts = opts || {};
+ opts.headers = opts.headers || {};
+ const token = localStorage.getItem('token');
+ if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+ const r = await fetch(url, opts);
+ if (r.status === 401) {
+  currentToken = ''; currentUser = null;
+  localStorage.removeItem('token');
+  showLogin();
+ }
+ return r;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    初始化
 ═══════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
  if (currentToken) {
   try {
-   const r = await fetch(`${API_BASE}/auth/me`, {headers:{'Authorization':'Bearer '+currentToken}});
+   const r = await apiFetch(`${API_BASE}/auth/me`);
    if (r.ok) { currentUser = await r.json(); showMain(); }
    else { showLogin(); }
   } catch(e){ showLogin(); }
@@ -530,16 +592,16 @@ async function doLogin(){
   if (!r.ok) { errEl.textContent = data.detail || '登录失败'; errEl.style.display = 'block'; return; }
   currentToken = data.token;
   currentUser = data.user;
-  localStorage.setItem('equipment_token', currentToken);
+  localStorage.setItem('token', currentToken);
   errEl.style.display = 'none';
   showMain();
  } catch(e){ errEl.textContent = '网络错误'; errEl.style.display = 'block'; }
 }
 
 function logout(){
- fetch(`${API_BASE}/auth/logout`, {method:'POST', headers:{'Authorization':'Bearer '+currentToken}}).catch(()=>{});
+ apiFetch(`${API_BASE}/auth/logout`, {method:'POST'}).catch(()=>{});
  currentToken = ''; currentUser = null;
- localStorage.removeItem('equipment_token');
+ localStorage.removeItem('token');
  showLogin();
 }
 
@@ -563,7 +625,7 @@ function switchTab(tab){
 ═══════════════════════════════════════════════════════════════ */
 async function loadOptions(){
  try {
-  const r = await fetch(`${API_BASE}/options/fields`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/options/fields`);
   if (r.ok) fieldOptions = await r.json();
  } catch(e){ console.error(e); }
 }
@@ -675,7 +737,7 @@ function resetForm(){
 function editEquipment(id){
  editingId = id;
  document.getElementById('form-title').textContent = ' 编辑设备台账';
- fetch(`${API_BASE}/equipments/${id}`, {headers:{'Authorization':'Bearer '+currentToken}})
+ apiFetch(`${API_BASE}/equipments/${id}`)
   .then(r => r.json())
   .then(data => {
    document.getElementById('edit-id').value = data.id;
@@ -738,8 +800,8 @@ async function submitForm(e){
  try {
   const url = editingId ? `${API_BASE}/equipments/${editingId}` : `${API_BASE}/equipments`;
   const method = editingId ? 'PUT' : 'POST';
-  const r = await fetch(url, {
-   method, headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+  const r = await apiFetch(url, {
+   method, headers:{'Content-Type':'application/json'},
    body: JSON.stringify(payload)
   });
   if (!r.ok) { const err = await r.json(); alert(err.detail || '保存失败'); return; }
@@ -758,8 +820,8 @@ async function handlePhotoUpload(input){
  const formData = new FormData();
  formData.append('file', file);
  try {
-  const r = await fetch(`${API_BASE}/equipments/upload`, {
-   method:'POST', headers:{'Authorization':'Bearer '+currentToken}, body: formData
+  const r = await apiFetch(`${API_BASE}/equipments/upload`, {
+   method:'POST', body: formData
   });
   if (!r.ok) { alert('上传失败'); return; }
   const data = await r.json();
@@ -791,10 +853,128 @@ function deletePhoto(){
 
 function viewPhoto(url){
  document.getElementById('photo-viewer-img').src = url;
+ const link = document.getElementById('photo-download-link');
+ link.href = url;
+ const name = url.split('/').pop() || 'certificate.jpg';
+ link.download = name;
  document.getElementById('dialog-photo').classList.remove('hidden');
 }
 function closePhotoViewer(){
  document.getElementById('dialog-photo').classList.add('hidden');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   批量管理
+═══════════════════════════════════════════════════════════════ */
+function toggleBatchItem(id, checked){
+ if (checked) batchSelectedIds.add(id);
+ else batchSelectedIds.delete(id);
+ updateBatchToolbar();
+}
+
+function toggleSelectAll(){
+ const allCb = document.getElementById('batch-select-all');
+ const rows = document.querySelectorAll('#equipment-tbody input[type=checkbox]');
+ rows.forEach(cb => {
+  cb.checked = allCb.checked;
+  const id = parseInt(cb.dataset.id);
+  if (allCb.checked) batchSelectedIds.add(id);
+  else batchSelectedIds.delete(id);
+ });
+ updateBatchToolbar();
+}
+
+function updateBatchToolbar(){
+ const bar = document.getElementById('batch-toolbar');
+ const count = batchSelectedIds.size;
+ document.getElementById('batch-count').textContent = `已选 ${count} 项`;
+ bar.style.display = count > 0 ? 'flex' : 'none';
+ // 同步表头全选框状态
+ const allCb = document.getElementById('batch-select-all');
+ const rowCbs = document.querySelectorAll('#equipment-tbody input[type=checkbox]');
+ if (rowCbs.length > 0) {
+  allCb.checked = Array.from(rowCbs).every(cb => cb.checked);
+ }
+}
+
+function clearBatchSelection(){
+ batchSelectedIds.clear();
+ document.getElementById('batch-select-all').checked = false;
+ document.querySelectorAll('#equipment-tbody input[type=checkbox]').forEach(cb => cb.checked = false);
+ updateBatchToolbar();
+}
+
+function openBatchCheckDateDialog(){
+ if (!batchSelectedIds.size) { alert('请先选择设备'); return; }
+ document.getElementById('batch-check-date-count').textContent = batchSelectedIds.size;
+ document.getElementById('dialog-batch-check-date').classList.remove('hidden');
+}
+
+function closeBatchCheckDateDialog(){
+ document.getElementById('dialog-batch-check-date').classList.add('hidden');
+}
+
+async function batchUpdateCheckDate(){
+ const date = document.getElementById('batch-check-date-input').value;
+ if (!date) { alert('请选择校验日期'); return; }
+ if (!confirm(`确定将 ${batchSelectedIds.size} 台设备的上次校验日期更新为 ${date}？`)) return;
+ try {
+  const r = await apiFetch(`${API_BASE}/equipments/batch/check-date`, {
+   method: 'POST',
+   headers: {'Content-Type': 'application/json'},
+   body: JSON.stringify({ids: Array.from(batchSelectedIds), last_check_date: date})
+  });
+  const d = await r.json();
+  if (r.ok) {
+   alert('已更新 ' + d.updated + ' 台设备');
+   closeBatchCheckDateDialog();
+   clearBatchSelection();
+   loadList();
+  } else {
+   alert('更新失败：' + (d.error || '未知错误'));
+  }
+ } catch(e){ alert('更新失败：' + e.message); }
+}
+
+async function batchSetStatus(status){
+ if (!batchSelectedIds.size) { alert('请先选择设备'); return; }
+ const label = status === '停用' ? '停用' : '报废';
+ if (!confirm(`确定将 ${batchSelectedIds.size} 台设备批量${label}？`)) return;
+ try {
+  const r = await apiFetch(`${API_BASE}/equipments/batch/status`, {
+   method: 'POST',
+   headers: {'Content-Type': 'application/json'},
+   body: JSON.stringify({ids: Array.from(batchSelectedIds), status: status})
+  });
+  const d = await r.json();
+  if (r.ok) {
+   alert('已更新 ' + d.updated + ' 台设备');
+   clearBatchSelection();
+   loadList();
+  } else {
+   alert('更新失败：' + (d.error || '未知错误'));
+  }
+ } catch(e){ alert('更新失败：' + e.message); }
+}
+
+async function batchDelete(){
+ if (!batchSelectedIds.size) { alert('请先选择设备'); return; }
+ if (!confirm(`确定删除选中的 ${batchSelectedIds.size} 台设备？此操作不可恢复！`)) return;
+ try {
+  const r = await apiFetch(`${API_BASE}/equipments/batch/delete`, {
+   method: 'POST',
+   headers: {'Content-Type': 'application/json'},
+   body: JSON.stringify({ids: Array.from(batchSelectedIds)})
+  });
+  const d = await r.json();
+  if (r.ok) {
+   alert('已删除 ' + d.deleted + ' 台设备');
+   clearBatchSelection();
+   loadList();
+  } else {
+   alert('删除失败：' + (d.error || '未知错误'));
+  }
+ } catch(e){ alert('删除失败：' + e.message); }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -817,7 +997,7 @@ async function loadList(){
  if (st) params.set('status', st);
 
  try {
-  const r = await fetch(`${API_BASE}/equipments?${params}`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/equipments?${params}`);
   const data = await r.json();
   renderTable(data.items || []);
   renderPagination(data.total || 0, data.page, data.size);
@@ -827,21 +1007,33 @@ async function loadList(){
  } catch(e){ console.error(e); }
 }
 
+let batchSelectedIds = new Set();
+
 function renderTable(items){
  const tbody = document.getElementById('equipment-tbody');
  if (!items.length) {
-  tbody.innerHTML = `<tr><td colspan="13" class="empty-state"><div class="icon">&#128736;</div><p>暂无设备记录</p></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="14" class="empty-state"><div class="icon">&#128736;</div><p>暂无设备记录</p></td></tr>`;
   return;
  }
- tbody.innerHTML = items.map(item => {
-  const statusClass = item.check_status === '超期' ? 'row-overdue' :
+ // 停用/报废排到底部
+ const sorted = [...items].sort((a, b) => {
+  const aInactive = (a.status === '停用' || a.status === '报废') ? 1 : 0;
+  const bInactive = (b.status === '停用' || b.status === '报废') ? 1 : 0;
+  return aInactive - bInactive;
+ });
+ tbody.innerHTML = sorted.map(item => {
+  const isInactive = item.status === '停用' || item.status === '报废';
+  const statusClass = isInactive ? 'row-inactive' :
+                      item.check_status === '超期' ? 'row-overdue' :
                       item.check_status === '临期' ? 'row-warning' : 'row-normal';
   const statusBadge = item.check_status === '超期' ? '<span class="badge" style="background:var(--danger);color:#fff">超期</span>' :
                       item.check_status === '临期' ? '<span class="badge" style="background:var(--warn);color:#fff">临期</span>' :
                       '<span class="badge" style="background:var(--success-bg);color:var(--success)">正常</span>';
   const daysText = item.days_to_check !== null ? (item.days_to_check < 0 ? `${item.days_to_check}天` : `${item.days_to_check}天`) : '-';
   const photoIcon = item.cert_photo ? `<a href="javascript:void(0)" onclick="viewPhoto('${item.cert_photo}')" title="查看证照">&#128444;</a>` : '';
+  const checked = batchSelectedIds.has(item.id) ? 'checked' : '';
   return `<tr class="${statusClass}">
+   <td><input type="checkbox" data-id="${item.id}" ${checked} onchange="toggleBatchItem(${item.id}, this.checked)" style="cursor:pointer"></td>
    <td><strong>${escapeHtml(item.equipment_no)}</strong></td>
    <td>${escapeHtml(item.equipment_name)} ${photoIcon}</td>
    <td>${escapeHtml(item.equipment_type)}</td>
@@ -860,6 +1052,7 @@ function renderTable(items){
    </td>
   </tr>`;
  }).join('');
+ updateBatchToolbar();
 }
 
 function renderAlertBanners(items){
@@ -901,7 +1094,7 @@ function debounceSearch(){
 async function deleteEquipment(id){
  if (!confirm('确定删除此设备记录？')) return;
  try {
-  const r = await fetch(`${API_BASE}/equipments/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/equipments/${id}`, {method:'DELETE'});
   if (r.ok) loadList();
   else alert('删除失败');
  } catch(e){ alert('网络错误'); }
@@ -917,7 +1110,7 @@ function escapeHtml(text){
 ═══════════════════════════════════════════════════════════════ */
 async function loadStats(){
  try {
-  const r = await fetch(`${API_BASE}/stats/summary`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/stats/summary`);
   const data = await r.json();
   renderSummaryCards(data);
   renderCharts(data);
@@ -994,16 +1187,80 @@ function exportExcel(){
 function downloadTemplate(){
  window.open(`${API_BASE}/excel/export/template?token=${currentToken}`, '_blank');
 }
+function _fmtExcelDate(val){
+  if (val instanceof Date) {
+    const y = val.getFullYear();
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  if (typeof val === 'number' && val > 30000 && val < 50000) {
+    // Excel serial date
+    const epoch = new Date(1899, 11, 30);
+    const date = new Date(epoch.getTime() + val * 86400000);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  const s = String(val || '').trim();
+  if (!s) return '';
+  // 尝试识别 2025/10/28 或 2025.10.28 格式
+  const m = s.match(/^(\d{4})[\/\.\-](\d{1,2})[\/\.\-](\d{1,2})$/);
+  if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return s;
+}
+
 async function importExcel(input){
  const file = input.files[0];
  if (!file) return;
- // 前端解析Excel并上传
  const reader = new FileReader();
  reader.onload = async function(e){
   try {
-   // 使用简单的CSV方式或提示用户
-   alert('请使用导出模板填写后批量导入，当前功能需通过模板下载-填写-导入流程');
-  } catch(err){ alert('导入失败'); }
+   const data = new Uint8Array(e.target.result);
+   const workbook = XLSX.read(data, {type: 'array'});
+   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+   const rows = XLSX.utils.sheet_to_json(firstSheet, {header: 1, defval: ''});
+   if (rows.length < 2) { alert('文件为空或格式不正确'); return; }
+   const headers = rows[0];
+   const headerMap = {
+    '设备编号': 'equipment_no', '设备名称': 'equipment_name', '设备类型': 'equipment_type',
+    '类别': 'category', '实验室/区域': 'lab', '楼层': 'floor',
+    '制造商': 'manufacturer', '型号规格': 'model', '出厂编号': 'serial_no',
+    '安装位置': 'location', '责任人': 'responsible_person', '责任部门': 'responsible_dept',
+    '采购日期': 'purchase_date', '投用日期': 'commissioning_date', '上次校验日期': 'last_check_date',
+    '下次校验日期': 'next_check_date', '校验周期(月)': 'check_cycle', '证书编号': 'cert_no',
+    '设备状态': 'status', '备注': 'remark'
+   };
+   const dateFields = ['purchase_date','commissioning_date','last_check_date','next_check_date'];
+   const jsonRows = [];
+   for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every(v => !v)) continue;
+    const obj = {};
+    headers.forEach((h, idx) => {
+     const key = headerMap[h];
+     if (key) {
+       const raw = row[idx];
+       obj[key] = dateFields.includes(key) ? _fmtExcelDate(raw) : String(raw || '');
+     }
+    });
+    if (obj.equipment_no && obj.equipment_name) jsonRows.push(obj);
+   }
+   if (!jsonRows.length) { alert('未找到有效数据，请使用模板填写'); return; }
+   const r = await apiFetch(`${API_BASE}/excel/import/excel`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({rows: jsonRows})
+   });
+   const d = await r.json();
+   if (r.ok) {
+    alert('导入完成：' + (d.imported || 0) + ' 条记录');
+    loadList();
+   } else {
+    alert('导入失败：' + (d.error || '未知错误'));
+   }
+  } catch(err){ alert('导入失败：' + err.message); }
  };
  reader.readAsArrayBuffer(file);
  input.value = '';
@@ -1024,13 +1281,20 @@ function renderOptionsManager(){
   'equipment_type':'设备类型','category':'类别','lab':'实验室/区域','floor':'楼层',
   'status':'设备状态','check_cycle':'校验周期'
  };
+ let builtin = Object.keys(fieldNames);
+ Object.keys(fieldOptions).forEach(k => { if (!builtin.includes(k)) builtin.push(k); });
+
  let html = '';
- Object.keys(fieldOptions).forEach(fn => {
-  const opts = fieldOptions[fn];
+ builtin.forEach(fn => {
+  const opts = fieldOptions[fn] || [];
   html += `<div class="opt-section"><h4>${fieldNames[fn] || fn}</h4><div class="opt-tags">`;
-  opts.forEach(o => {
-   html += `<span class="opt-tag">${escapeHtml(o.value)} <span class="del" onclick="deleteOption(${o.id},'${fn}')">&times;</span></span>`;
-  });
+  if (opts.length) {
+   opts.forEach(o => {
+    html += `<span class="opt-tag">${escapeHtml(o.value)} <span class="del" onclick="deleteOption(${o.id},'${fn}')">&times;</span></span>`;
+   });
+  } else {
+   html += '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>';
+  }
   html += `</div><div class="opt-add"><input type="text" id="opt-add-${fn}" placeholder="新增选项" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px"><button class="btn btn-primary btn-xs" onclick="addOption('${fn}')">添加</button></div></div>`;
  });
  container.innerHTML = html;
@@ -1041,8 +1305,8 @@ async function addOption(fieldName){
  const value = input.value.trim();
  if (!value) return;
  try {
-  const r = await fetch(`${API_BASE}/options`, {
-   method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+  const r = await apiFetch(`${API_BASE}/options`, {
+   method:'POST', headers:{'Content-Type':'application/json'},
    body: JSON.stringify({field_name:fieldName, value})
   });
   if (r.ok) { input.value = ''; await loadOptions(); initFilters(); renderOptionsManager(); }
@@ -1052,7 +1316,7 @@ async function addOption(fieldName){
 async function deleteOption(id, fieldName){
  if (!confirm('确定删除此选项？')) return;
  try {
-  const r = await fetch(`${API_BASE}/options/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/options/${id}`, {method:'DELETE'});
   if (r.ok) { await loadOptions(); initFilters(); renderOptionsManager(); }
   else alert('删除失败');
  } catch(e){ alert('网络错误'); }
@@ -1069,7 +1333,7 @@ function closeUserManager(){ document.getElementById('dialog-users').classList.a
 
 async function loadUsers(){
  try {
-  const r = await fetch(`${API_BASE}/auth/users`, {headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/auth/users`);
   const users = await r.json();
   const container = document.getElementById('users-content');
   container.innerHTML = '<table style="width:100%"><thead><tr><th>用户名</th><th>显示名</th><th>角色</th><th>操作</th></tr></thead><tbody>' +
@@ -1081,7 +1345,7 @@ async function loadUsers(){
 async function deleteUser(id){
  if (!confirm('确定删除此用户？')) return;
  try {
-  const r = await fetch(`${API_BASE}/auth/users/${id}`, {method:'DELETE', headers:{'Authorization':'Bearer '+currentToken}});
+  const r = await apiFetch(`${API_BASE}/auth/users/${id}`, {method:'DELETE'});
   if (r.ok) loadUsers(); else alert('删除失败');
  } catch(e){ alert('网络错误'); }
 }
@@ -1090,8 +1354,8 @@ function showRegisterForm(){
  const username = prompt('用户名:'); if (!username) return;
  const password = prompt('密码:'); if (!password) return;
  const role = confirm('是否设为管理员？') ? 'admin' : 'user';
- fetch(`${API_BASE}/auth/register`, {
-  method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentToken},
+ apiFetch(`${API_BASE}/auth/register`, {
+  method:'POST', headers:{'Content-Type':'application/json'},
   body: JSON.stringify({username, password, role})
  }).then(r => { if (r.ok) { alert('注册成功'); loadUsers(); } else alert('注册失败'); });
 }
@@ -1116,80 +1380,6 @@ function showRegisterForm(){
 .opt-tag .del:hover{background:var(--danger-bg);color:var(--danger)}
 .opt-add{display:flex;gap:8px;margin-top:14px}
 </style>
-
-</body>
-</html>
-let auditDebounceTimer = null;
-
-function debounceAudit() {
- clearTimeout(auditDebounceTimer);
- auditDebounceTimer = setTimeout(() => { auditPage=1; loadAuditLogs(); }, 400);
-}
-
-async function loadAuditLogs() {
- const action = document.getElementById('audit-filter-action').value;
- const user = document.getElementById('audit-filter-user').value.trim();
- const start = document.getElementById('audit-filter-start').value;
- const end = document.getElementById('audit-filter-end').value;
-
- const params = new URLSearchParams();
- params.set('page', auditPage);
- params.set('size', 30);
- if (action) params.set('action', action);
- if (user) params.set('username', user);
- if (start) params.set('start_date', start);
- if (end) params.set('end_date', end);
-
- try {
-  const r = await fetch(`${API_BASE}/audit?${params}`, {headers:{'Authorization':'Bearer '+currentToken}});
-  const data = await r.json();
-  if (!r.ok) throw new Error(data.detail);
-
-  document.getElementById('audit-count').textContent = `共 ${data.total} 条`;
-  const tbody = document.getElementById('audit-tbody');
-  if (!data.items || data.items.length === 0) {
-   tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-tertiary)">暂无审计日志</td></tr>';
-   document.getElementById('audit-pagination').innerHTML = '';
-   return;
-  }
-
-  const actionLabels = {create:'新增', update:'修改', delete:'删除', login:'登录', logout:'登出', upload:'上传'};
-  tbody.innerHTML = data.items.map(log => {
-   const time = new Date(log.created_at).toLocaleString('zh-CN', {hour12:false});
-   const act = actionLabels[log.action] || log.action;
-   const userDisp = log.display_name || log.username || '-';
-   let detail = log.target_name || log.detail || '-';
-   if (log.action === 'update' && log.target_name) {
-    detail = `${log.target_name}（${log.target_id}）`;
-   } else if (log.action === 'create' && log.target_name) {
-    detail = `${log.target_name}`;
-   } else if (log.action === 'delete' && log.target_name) {
-    detail = `${log.target_name}`;
-   }
-   const targetType = log.target_type;
-   return `<tr>
-    <td style="white-space:nowrap">${time}</td>
-    <td>${userDisp}</td>
-    <td><span class="status-badge badge-${log.action}">${act}</span></td>
-    <td style="font-size:12px;color:var(--text-secondary)">${targetType}</td>
-    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${detail}</td>
-   </tr>`;
-  }).join('');
-
-  // Pagination
-  const totalPages = Math.ceil(data.total / 30);
-  const pag = document.getElementById('audit-pagination');
-  if (totalPages <= 1) { pag.innerHTML = ''; return; }
-  let html = '';
-  if (auditPage > 1) html += `<button class="page-btn" onclick="auditPage=1;loadAuditLogs()">首页</button><button class="page-btn" onclick="auditPage--;loadAuditLogs()">上一页</button>`;
-  html += `<span class="page-info">第 ${auditPage}/${totalPages} 页</span>`;
-  if (auditPage < totalPages) html += `<button class="page-btn" onclick="auditPage++;loadAuditLogs()">下一页</button><button class="page-btn" onclick="auditPage=${totalPages};loadAuditLogs()">末页</button>`;
-  pag.innerHTML = html;
- } catch(e) {
-  document.getElementById('audit-tbody').innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--danger)">加载失败: ${e.message}</td></tr>`;
- }
-}
-</script>
 
 </body>
 </html>

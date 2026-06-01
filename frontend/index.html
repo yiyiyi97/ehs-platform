@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EHS 工业安全管理平台</title>
+  <title>光源EHS安全管理平台</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <style>
     :root {
@@ -113,9 +113,24 @@
   </div>
   <div class="header">
     <div class="system-id">Industrial Safety Management System</div>
-    <h1>EHS 安全管理平台</h1>
+    <h1 id="site-title">EHS 安全管理平台</h1>
     <p>LOTO 锁定管理 / 安全联锁屏蔽 / 隐患风险管控 / 异常事件记录 / 特种设备&计量设备管理</p>
   </div>
+  <script>
+  (function() {
+    const port = window.location.port;
+    const map = {
+      '8000': '光源EHS深圳安全管理平台',
+      '8001': '光源EHS武汉安全管理平台',
+      '8002': '光源EHS北京安全管理平台',
+      '8003': '光源EHS上海安全管理平台'
+    };
+    const title = map[port] || '光源EHS安全管理平台';
+    document.title = title;
+    const h1 = document.getElementById('site-title');
+    if (h1) h1.textContent = title;
+  })();
+  </script>
   <div class="divider"></div>
 
   <div class="modules">

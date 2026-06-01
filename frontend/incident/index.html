@@ -205,6 +205,14 @@ td.cell-desc{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:
 #bi-custom-charts .custom-chart-item .chart-wrap{padding:0;aspect-ratio:16/9}
 
 .hidden{display:none !important}
+.opt-section{margin-bottom:24px}
+.opt-section h4{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text-secondary);letter-spacing:.2px}
+.opt-tags{display:flex;flex-wrap:wrap;gap:8px}
+.opt-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;color:var(--text-primary);transition:all .2s var(--ease-out)}
+.opt-tag:hover{border-color:var(--primary-border);background:var(--primary-bg)}
+.opt-tag .del{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;font-size:11px;color:var(--text-tertiary);transition:all .15s}
+.opt-tag .del:hover{background:var(--danger-bg);color:var(--danger)}
+.opt-add{display:flex;gap:8px;margin-top:14px}
 .empty-state{text-align:center;padding:56px 20px;color:var(--text-secondary)}
 .empty-state .icon{font-size:52px;margin-bottom:16px;opacity:.35}
 .empty-state p{font-size:14px;font-weight:500}
@@ -607,13 +615,7 @@ td.cell-desc{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:
  <div class="dialog">
  <h3>字段选项管理</h3>
  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">管理各字段的下拉选项，新增的选项会自动应用到表单和筛选器。</p>
- <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
- <select id="opt-field" class="filter-select"></select>
- <input type="text" id="opt-new-value" placeholder="新选项值" class="filter-input" style="flex:1" onkeyup="if(event.key==='Enter')addOption()">
- <button class="btn btn-primary btn-sm" onclick="addOption()">＋ 添加</button>
- </div>
- <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
- <div id="opt-list"></div>
+ <div id="options-content"></div>
  <div style="text-align:right;margin-top:16px">
  <button class="btn btn-outline btn-sm" onclick="closeOptionsManager()">关闭</button>
  </div>
@@ -626,6 +628,7 @@ let currentPage = 1;
 let currentUser = null;
 let userRole = '';
 let reportFileToUpload = null;
+let allOptions = {};
 
 // API 请求封装
 async function apiFetch(url, opts) {
@@ -749,7 +752,7 @@ async function loadFilterOptions() {
  try {
  // 从选项管理接口获取各字段的选项值
  const r = await apiFetch(`${API}/options/fields`);
- const allOptions = await r.json();
+ allOptions = await r.json();
  const fields = ['incident_type', 'event_level', 'lab', 'version', 'subsystem'];
  for (const field of fields) {
  const sel = document.getElementById('filter-' + field.replace(/_/g, '-'));
@@ -793,57 +796,69 @@ async function loadFilterOptions() {
 // 选项管理
 function openOptionsManager() {
  document.getElementById('options-dialog').classList.remove('hidden');
- renderOptionsList();
+ renderOptionsManager();
 }
 function closeOptionsManager() {
  document.getElementById('options-dialog').classList.add('hidden');
 }
 
-async function renderOptionsList() {
- const of = document.getElementById('opt-field');
+function renderOptionsManager() {
+ const container = document.getElementById('options-content');
  const labels = {
- incident_type:'异常类型', event_level:'事件等级', lab:'实验室',
- version:'版本', subsystem:'子系统', device_name:'设备名称'
+  incident_type:'异常类型', event_level:'事件等级', lab:'实验室',
+  version:'版本', subsystem:'子系统', device_name:'设备名称'
  };
- // 初始化字段选择器（只执行一次）
- if (!of.dataset.inited) {
- of.innerHTML = Object.keys(labels).map(k => `<option value="${k}">${labels[k]}</option>`).join('');
- of.dataset.inited = '1';
- of.onchange = () => renderOptionsList();
- }
- const fn = of.value;
- try {
- const r = await apiFetch(`${API}/options?field=${fn}`);
- const opts = await r.json();
- const container = document.getElementById('opt-list');
- container.innerHTML = `<div class="opt-section"><h4>${labels[fn] || fn}</h4><div class="opt-tags">${opts.length ?
- opts.map(o => `<span class="opt-tag">${o.value}<span class="del" onclick="delOption(${o.id})">✕</span></span>`).join('') :
- '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>'}</div></div>`;
- } catch (e) {
- console.error('加载选项失败', e);
- }
+ let builtin = Object.keys(labels);
+ Object.keys(allOptions).forEach(k => { if (!builtin.includes(k)) builtin.push(k); });
+
+ let html = '';
+ builtin.forEach(fn => {
+  const vals = allOptions[fn] || [];
+  html += `<div class="opt-section">
+   <h4>${labels[fn] || fn}</h4>
+   <div class="opt-tags">${vals.length ?
+    vals.map(v => `<span class="opt-tag">${v}<span class="del" onclick="delOption('${fn}','${v}')">✕</span></span>`).join('') :
+    '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>'}
+   </div>
+   <div class="opt-add">
+    <input type="text" id="opt-add-${fn}" placeholder="新增选项" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px">
+    <button class="btn btn-primary btn-xs" onclick="addOption('${fn}')">添加</button>
+   </div>
+  </div>`;
+ });
+ container.innerHTML = html;
 }
 
-async function addOption() {
- const fn = document.getElementById('opt-field').value;
- const v = document.getElementById('opt-new-value').value.trim();
- if (!fn || !v) return;
+async function addOption(fieldName) {
+ const input = document.getElementById('opt-add-' + fieldName);
+ const v = input.value.trim();
+ if (!v) return;
  const r = await apiFetch(API + '/options', {
- method: 'POST',
- headers: {'Content-Type': 'application/json'},
- body: JSON.stringify({field_name: fn, value: v})
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({field_name: fieldName, value: v})
  });
  if (!r.ok) { showToast('添加失败', true); return; }
- document.getElementById('opt-new-value').value = '';
- await renderOptionsList();
- await loadFilterOptions();
+ input.value = '';
+ await loadOptions();
 }
 
-async function delOption(id) {
- const r = await apiFetch(API + '/options/' + id, {method: 'DELETE'});
- if (!r.ok) { showToast('删除失败', true); return; }
- await renderOptionsList();
+async function delOption(field, value) {
+ const r = await apiFetch(API + '/options?field=' + field);
+ const opts = await r.json();
+ const found = opts.find(o => o.value === value);
+ if (found) {
+  const dr = await apiFetch(API + '/options/' + found.id, {method: 'DELETE'});
+  if (!dr.ok) { showToast('删除失败', true); return; }
+ }
+ await loadOptions();
+}
+
+async function loadOptions() {
+ const r = await apiFetch(API + '/options/fields');
+ allOptions = await r.json();
  await loadFilterOptions();
+ renderOptionsManager();
 }
 
 // Toast 通知

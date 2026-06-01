@@ -1,12 +1,27 @@
 """Excel 导入导出 API"""
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import StreamingResponse
 from ehs_equipment.models import SessionLocal, EquipmentRecord
-from ehs_equipment.api.auth import get_current_user, require_admin
+from ehs_hazard.models import SessionLocal as HazardSessionLocal, User as HazardUser
+from ehs_equipment.api.auth import require_admin
 from openpyxl import Workbook, load_workbook
 from io import BytesIO
 
 router = APIRouter()
+
+
+def _auth_by_token(token: str):
+    """通过 URL query token 认证（复用 hazard 统一用户表）"""
+    if not token:
+        raise HTTPException(status_code=401, detail="未登录")
+    db = HazardSessionLocal()
+    try:
+        user = db.query(HazardUser).filter(HazardUser.token == token).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="登录已过期")
+        return user
+    finally:
+        db.close()
 
 HEADERS = [
     ("equipment_no", "设备编号"),
@@ -33,7 +48,8 @@ HEADERS = [
 
 
 @router.get("/export/template")
-def download_template(user=Depends(get_current_user)):
+def download_template(token: str = Query("")):
+    _auth_by_token(token)
     wb = Workbook()
     ws = wb.active
     ws.title = "设备台账模板"
@@ -48,7 +64,8 @@ def download_template(user=Depends(get_current_user)):
 
 
 @router.get("/export/excel")
-def export_excel(user=Depends(get_current_user)):
+def export_excel(token: str = Query("")):
+    _auth_by_token(token)
     db = SessionLocal()
     try:
         items = db.query(EquipmentRecord).all()
@@ -74,6 +91,8 @@ def import_excel(data: dict, admin=Depends(require_admin)):
     if not rows:
         raise HTTPException(400, "没有数据")
 
+    from ehs_equipment.api.equipments import _calc_next_check_date
+
     db = SessionLocal()
     try:
         imported = 0
@@ -84,6 +103,12 @@ def import_excel(data: dict, admin=Depends(require_admin)):
             existing = db.query(EquipmentRecord).filter(EquipmentRecord.equipment_no == row["equipment_no"]).first()
             if existing:
                 continue
+            # 自动计算下次校验日期
+            if row.get("last_check_date") and row.get("check_cycle"):
+                try:
+                    row["next_check_date"] = _calc_next_check_date(row["last_check_date"], int(row["check_cycle"]))
+                except Exception:
+                    pass
             item = EquipmentRecord(**{k: row.get(k, "") for k, _ in HEADERS if k in EquipmentRecord.__table__.columns.keys()})
             db.add(item)
             imported += 1

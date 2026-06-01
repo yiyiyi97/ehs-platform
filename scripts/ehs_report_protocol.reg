@@ -1,0 +1,16 @@
+Windows Registry Editor Version 5.00
+
+; EHS 日报脚本自定义协议注册
+; 使用方法：双击此文件导入注册表，然后根据实际路径修改下方 bat 路径
+
+[HKEY_CLASSES_ROOT\ehs-report]
+@="URL:EHS Report Protocol"
+"URL Protocol"=""
+
+[HKEY_CLASSES_ROOT\ehs-report\shell]
+
+[HKEY_CLASSES_ROOT\ehs-report\shell\open]
+
+[HKEY_CLASSES_ROOT\ehs-report\shell\open\command]
+; ========== 注意：请把下面的路径改成你电脑上 ehs_run_report.bat 的实际位置 ==========
+@="\"C:\\EHS_Dashboard\\scripts\\ehs_run_report.bat\" \"%1\""

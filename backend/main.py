@@ -1,20 +1,16 @@
 """EHS Dashboard — Unified FastAPI entry point"""
 import os
 import sys
-import subprocess
-import asyncio
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse, JSONResponse, Response
-import httpx
+from fastapi.responses import FileResponse, JSONResponse
 import traceback
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "..", "data")
 UPLOADS_DIR = os.path.join(BASE_DIR, "..", "uploads")
 FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
-SHIELD_BACKEND_DIR = os.path.join(BASE_DIR, "..", "shield_backend")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -23,42 +19,9 @@ os.makedirs(UPLOADS_DIR, exist_ok=True)
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-shield_process = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global shield_process
-    # Start Shield Express backend
-    shield_env = os.environ.copy()
-    shield_env["PORT"] = "3456"
-    shield_env["NODE_ENV"] = "production"
-    shield_env["UPLOADS_DIR"] = UPLOADS_DIR
-    try:
-        shield_process = subprocess.Popen(
-            ["node", "dist/index.js"],
-            cwd=SHIELD_BACKEND_DIR,
-            env=shield_env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        # Wait for Express to start
-        for _ in range(30):
-            await asyncio.sleep(0.5)
-            try:
-                async with httpx.AsyncClient() as client:
-                    r = await client.get("http://localhost:3456/api/health", timeout=1.0)
-                    if r.status_code == 200:
-                        print("Shield backend started on :3456")
-                        break
-            except Exception:
-                pass
-        else:
-            print("WARNING: Shield backend may not have started properly")
-    except Exception as e:
-        print(f"Failed to start Shield backend: {e}")
-        shield_process = None
-
-    # Init databases
     from ehs_loto.models import init_db as loto_init_db
     from ehs_hazard.models import init_db as hazard_init_db
     from ehs_incident.models import init_db as incident_init_db
@@ -68,16 +31,7 @@ async def lifespan(app: FastAPI):
     incident_init_db()
     equipment_init_db()
     print("EHS Dashboard ready on :8000")
-
     yield
-
-    # Shutdown
-    if shield_process:
-        shield_process.terminate()
-        try:
-            shield_process.wait(timeout=5)
-        except Exception:
-            shield_process.kill()
 
 app = FastAPI(title="EHS Dashboard", version="1.0.0", lifespan=lifespan)
 
@@ -123,7 +77,6 @@ from ehs_equipment.api.equipments import router as equipment_equipments_router
 from ehs_equipment.api.options import router as equipment_options_router
 from ehs_equipment.api.stats import router as equipment_stats_router
 from ehs_equipment.api.excel import router as equipment_excel_router
-from ehs_equipment.api.audit import router as equipment_audit_router
 from ehs_equipment.main import core_router as equipment_core_router
 
 app.include_router(equipment_auth_router, prefix="/api/equipment/auth", tags=["equipment-auth"])
@@ -131,7 +84,6 @@ app.include_router(equipment_equipments_router, prefix="/api/equipment/equipment
 app.include_router(equipment_options_router, prefix="/api/equipment/options", tags=["equipment-options"])
 app.include_router(equipment_stats_router, prefix="/api/equipment/stats", tags=["equipment-stats"])
 app.include_router(equipment_excel_router, prefix="/api/equipment/excel", tags=["equipment-excel"])
-app.include_router(equipment_audit_router, prefix="/api/equipment/audit", tags=["equipment-audit"])
 app.include_router(equipment_core_router, prefix="/api/equipment", tags=["equipment-core"])
 
 # ═══════════════════════════════════════════════════════════════
@@ -150,35 +102,19 @@ app.include_router(incident_excel_router, prefix="/api/incident/excel", tags=["i
 app.include_router(incident_core_router, prefix="/api/incident", tags=["incident-core"])
 
 # ═══════════════════════════════════════════════════════════════
-#  Shield API Proxy → Express backend (:3456)
+#  Shield API
 # ═══════════════════════════════════════════════════════════════
-@app.api_route("/api/shield/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def proxy_shield(request: Request, path: str):
-    method = request.method
-    url = f"http://localhost:3456/api/{path}"
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
-    body = await request.body()
-    params = str(request.query_params)
-    if params:
-        url = f"{url}?{params}"
+from ehs_shield.api.items import router as shield_items_router
+from ehs_shield.api.applications import router as shield_applications_router
+from ehs_shield.api.stats import router as shield_stats_router
+from ehs_shield.api.push import router as shield_push_router
+from ehs_shield.main import core_router as shield_core_router
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.request(
-                method=method,
-                url=url,
-                headers=headers,
-                content=body,
-                timeout=60.0,
-            )
-        except httpx.ConnectError:
-            return JSONResponse(status_code=503, content={"error": "Shield backend unavailable"})
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        headers={k: v for k, v in response.headers.items() if k.lower() not in ("transfer-encoding", "content-encoding", "content-length")},
-    )
+app.include_router(shield_items_router, prefix="/api/shield", tags=["shield-items"])
+app.include_router(shield_applications_router, prefix="/api/shield", tags=["shield-applications"])
+app.include_router(shield_stats_router, prefix="/api/shield", tags=["shield-stats"])
+app.include_router(shield_push_router, prefix="/api/shield", tags=["shield-push"])
+app.include_router(shield_core_router, prefix="/api/shield", tags=["shield-core"])
 
 # ═══════════════════════════════════════════════════════════════
 #  Safety Officer Schedule API
@@ -234,49 +170,41 @@ def save_schedule(data: SchedulePayload):
     _save_schedule_all(all_data)
     return {"success": True}
 
-# Shield uploads proxy
-@app.api_route("/uploads/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
-async def proxy_shield_uploads(request: Request, path: str):
-    method = request.method
-    url = f"http://localhost:3456/uploads/{path}"
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in ("host", "content-length")}
-    body = await request.body()
-    params = str(request.query_params)
-    if params:
-        url = f"{url}?{params}"
+SHIELD_UPLOADS_DIR = os.path.join(BASE_DIR, "..", "shield_backend", "uploads")
+BACKEND_UPLOADS_DIR = os.path.join(BASE_DIR, "uploads")
 
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.request(
-                method=method,
-                url=url,
-                headers=headers,
-                content=body,
-                timeout=60.0,
-            )
-        except httpx.ConnectError:
-            return JSONResponse(status_code=503, content={"error": "Shield backend unavailable"})
-
-    return Response(
-        content=response.content,
-        status_code=response.status_code,
-        headers={k: v for k, v in response.headers.items() if k.lower() not in ("transfer-encoding", "content-encoding")},
-    )
+# Static uploads — 按优先级查找文件
+@app.api_route("/uploads/{path:path}", methods=["GET"])
+async def serve_uploads(path: str):
+    for d in [UPLOADS_DIR, SHIELD_UPLOADS_DIR, BACKEND_UPLOADS_DIR]:
+        p = os.path.join(d, path)
+        if os.path.isfile(p):
+            return FileResponse(p)
+    return JSONResponse(status_code=404, content={"error": "文件不存在"})
 
 # ═══════════════════════════════════════════════════════════════
 #  Static Files
 # ═══════════════════════════════════════════════════════════════
-# Shield SPA fallback (must be before mount so catch-all works)
+SHIELD_DIR = os.path.join(FRONTEND_DIR, "shield")
+
 @app.get("/shield/{full_path:path}")
 def shield_spa(full_path: str):
-    file_path = os.path.join(FRONTEND_DIR, "shield", full_path)
-    if os.path.isfile(file_path):
-        return FileResponse(file_path)
-    return FileResponse(os.path.join(FRONTEND_DIR, "shield", "index.html"))
+    fp = os.path.join(SHIELD_DIR, full_path)
+    if not os.path.isfile(fp):
+        fp = os.path.join(SHIELD_DIR, "index.html")
+    r = FileResponse(fp)
+    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    r.headers["Pragma"] = "no-cache"
+    r.headers["Expires"] = "0"
+    return r
+
+@app.get("/shield")
+@app.get("/shield/")
+def shield_index():
+    return shield_spa("index.html")
 
 app.mount("/loto", StaticFiles(directory=os.path.join(FRONTEND_DIR, "loto"), html=True), name="loto")
 app.mount("/hazard", StaticFiles(directory=os.path.join(FRONTEND_DIR, "hazard"), html=True), name="hazard")
-app.mount("/shield", StaticFiles(directory=os.path.join(FRONTEND_DIR, "shield"), html=True), name="shield")
 app.mount("/incident", StaticFiles(directory=os.path.join(FRONTEND_DIR, "incident"), html=True), name="incident")
 app.mount("/equipment", StaticFiles(directory=os.path.join(FRONTEND_DIR, "equipment"), html=True), name="equipment")
 

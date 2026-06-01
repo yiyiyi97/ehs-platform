@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 import os
 
 Base = declarative_base()
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/hazard.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {})
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "hazard.db")
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
 
 

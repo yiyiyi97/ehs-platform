@@ -3,47 +3,11 @@ from sqlalchemy import Column, String, Integer, DateTime, Text, create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timezone, timedelta
 import os
-import json
 
 Base = declarative_base()
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "equipment.db")
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(bind=engine)
-
-
-# ── 审计日志 ──
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, default=0)
-    username = Column(String, default="")
-    display_name = Column(String, default="")
-    action = Column(String, nullable=False)          # create / update / delete / login / logout / upload
-    target_type = Column(String, default="")         # equipment / auth / excel
-    target_id = Column(String, default="")           # 记录ID
-    target_name = Column(String, default="")         # 设备编号或名称
-    before = Column(Text, default="")                # 修改前 JSON
-    after = Column(Text, default="")                 # 修改后 JSON
-    detail = Column(Text, default="")                # 额外描述
-    ip = Column(String, default="")
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "username": self.username,
-            "display_name": self.display_name,
-            "action": self.action,
-            "target_type": self.target_type,
-            "target_id": self.target_id,
-            "target_name": self.target_name,
-            "before": self.before,
-            "after": self.after,
-            "detail": self.detail,
-            "ip": self.ip,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-        }
 
 
 
@@ -146,34 +110,6 @@ class EquipmentRecord(Base):
             return (next_date - today).days
         except Exception:
             return None
-
-
-# ── 审计日志辅助函数 ──
-def log_audit(user, action: str, target_type: str, target_id: str = "", target_name: str = "",
-              before: dict = None, after: dict = None, detail: str = "", ip: str = ""):
-    """记录审计日志（同步写入，失败不阻断主流程）"""
-    try:
-        db = SessionLocal()
-        try:
-            log = AuditLog(
-                user_id=getattr(user, "id", 0) or 0,
-                username=getattr(user, "username", "") or "",
-                display_name=getattr(user, "display_name", "") or getattr(user, "username", "") or "",
-                action=action,
-                target_type=target_type,
-                target_id=str(target_id) if target_id else "",
-                target_name=target_name or "",
-                before=json.dumps(before, ensure_ascii=False, default=str) if before else "",
-                after=json.dumps(after, ensure_ascii=False, default=str) if after else "",
-                detail=detail,
-                ip=ip,
-            )
-            db.add(log)
-            db.commit()
-        finally:
-            db.close()
-    except Exception:
-        pass  # 审计日志失败不影响主业务
 
 
 def init_db():

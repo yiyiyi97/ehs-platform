@@ -1,12 +1,460 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>安全联锁屏蔽系统</title>
-    <script type="module" crossorigin src="/shield/assets/index-Dz_kmWBS.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>安全联锁屏蔽系统</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+ --bg:#f1f5f9;--card:#ffffff;--surface:#f8fafc;--border:#e2e8f0;--divider:#f1f5f9;
+ --text:#0f172a;--text-primary:#1e293b;--text-secondary:#64748b;--text-tertiary:#94a3b8;
+ --primary:#1d4ed8;--primary-light:#3b82f6;--primary-bg:#eff6ff;--primary-border:#bfdbfe;
+ --primary-hover:#1e40af;
+ --danger:#dc2626;--danger-bg:#fef2f2;--danger-light:#fca5a5;--success:#059669;--success-bg:#f0fdf4;
+ --warn:#d97706;--warn-bg:#fffbeb;--warn-light:#fcd34d;--info:#0e7490;--info-bg:#ecfeff;
+ --shadow-sm:0 1px 2px 0 rgba(15,23,42,.04);--shadow:0 1px 3px 0 rgba(15,23,42,.06);
+ --shadow-md:0 4px 8px -2px rgba(15,23,42,.07);
+ --radius:16px;--radius-md:12px;--radius-sm:10px;--radius-xs:8px;--radius-pill:999px;
+ --header-h:64px;--tabs-h:52px;
+ --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:"Inter","PingFang SC","Microsoft YaHei",-apple-system,sans-serif;font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+header{
+ background:linear-gradient(135deg,#0f172a,#1e3a5f 40%,#1e1b4b);
+ color:#fff;padding:0 32px;height:var(--header-h);display:flex;
+ justify-content:space-between;align-items:center;
+ box-shadow:0 4px 20px rgba(15,23,42,.25);position:sticky;top:0;z-index:50
+}
+header h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:12px}
+header h1 .icon{width:36px;height:36px;background:rgba(255,255,255,.1);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(255,255,255,.12);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.header-actions{display:flex;gap:8px;align-items:center}
+.version-select{padding:6px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:var(--radius-xs);font-size:12px;cursor:pointer;outline:none;min-width:100px}
+.version-select option{background:#1e293b;color:#fff}
+.header-btn{padding:7px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-weight:500;transition:all .2s var(--ease-out);white-space:nowrap;display:flex;align-items:center;gap:6px}
+.header-btn:hover{background:rgba(255,255,255,.16);transform:translateY(-1px)}
+
+.tabs{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--border);padding:0 32px;height:var(--tabs-h);position:sticky;top:var(--header-h);z-index:49}
+.tab{padding:0 24px;height:100%;cursor:pointer;font-size:14px;color:var(--text-secondary);border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;transition:all .25s var(--ease-out);user-select:none;font-weight:500}
+.tab:hover{color:var(--text);background:#f8fafc}
+.tab.active{color:var(--primary);border-bottom-color:var(--primary);font-weight:600}
+.tab .badge{background:var(--primary-bg);color:var(--primary);font-size:11px;padding:2px 8px;border-radius:var(--radius-pill);font-weight:600}
+
+.container{max-width:98vw;margin:0 auto;padding:24px 32px}
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border)}
+.card-body{padding:24px}
+.card-header{padding:16px 24px;border-bottom:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:700;color:var(--text-primary)}
+
+.alert{padding:12px 16px;border-radius:var(--radius-xs);margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:8px;font-weight:500}
+.alert-error{background:var(--danger-bg);color:var(--danger);border:1px solid #fecaca}
+.alert-warn{background:var(--warn-bg);color:var(--warn);border:1px solid #fde68a}
+
+table{width:100%;border-collapse:collapse}
+th{padding:10px 12px;text-align:left;background:var(--surface);color:var(--text-secondary);font-weight:600;font-size:12px;letter-spacing:.5px;border-bottom:2px solid var(--border)}
+td{padding:9px 12px;text-align:left;font-size:13px;white-space:nowrap}
+td{border-bottom:1px solid var(--divider)}
+tr.same-group td,tr.same-group-end td{border-bottom:none}
+tr.group-end td{border-bottom:2px solid var(--border)}
+tr:hover td{background:#f8fafc}
+tr.overdue td{background:#fff2f0 !important}
+tr.approaching td{background:#fffbe6 !important}
+tr.overdue:hover td{background:#ffe5e0 !important}
+tr.approaching:hover td{background:#fff3cd !important}
+.table-wrap{overflow-x:auto}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-grid .full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group label{font-size:12px;font-weight:600;color:var(--text-secondary)}
+.form-group input,.form-group textarea,.form-group select{padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;background:var(--surface);color:var(--text);font-family:inherit;transition:all .2s var(--ease-out)}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(59,130,246,.12);background:#fff}
+.form-group textarea{min-height:80px;resize:vertical}
+
+.btn{padding:8px 18px;border-radius:var(--radius-xs);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .2s var(--ease-out);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-hover)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.9}
+.btn-outline{background:#fff;color:var(--text);border-color:var(--border)}
+.btn-outline:hover{background:var(--surface);border-color:var(--primary-border)}
+.btn-warn{background:var(--warn);color:#fff}
+.btn-warn:hover{opacity:.9}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.tag{display:inline-block;padding:2px 10px;border-radius:var(--radius-pill);font-size:11px;font-weight:600}
+.tag-red{background:var(--danger-bg);color:var(--danger)}
+.tag-green{background:var(--success-bg);color:var(--success)}
+.tag-blue{background:var(--primary-bg);color:var(--primary)}
+.tag-yellow{background:var(--warn-bg);color:var(--warn)}
+
+.stats-grid{display:flex;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.stat-card{flex:1;min-width:150px;background:#fff;padding:18px 24px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid var(--border)}
+.stat-card .stat-value{font-size:28px;font-weight:700;color:var(--text)}
+.stat-card .stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.stat-card.danger .stat-value{color:var(--danger)}
+.stat-card.warning .stat-value{color:var(--warn)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-bg.hidden{display:none}
+.modal{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow-md);width:90vw;max-width:600px;max-height:85vh;overflow-y:auto;padding:24px}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:20px;color:var(--text-primary)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--divider)}
+
+.items-checklist{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-xs);padding:8px}
+.items-checklist label{display:flex;align-items:center;gap:8px;padding:4px 8px;cursor:pointer;font-size:13px;border-radius:4px}
+.items-checklist label:hover{background:var(--surface)}
+.items-checklist label.hidden{display:none}
+.items-checklist input[type=checkbox]{accent-color:var(--primary)}
+.item-search-box{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;background:var(--surface);width:100%;margin-bottom:8px}
+
+.loading{text-align:center;padding:40px;color:var(--text-secondary);font-size:14px}
+.link{cursor:pointer;color:var(--primary);font-weight:500;text-decoration:none}
+.link:hover{color:var(--primary-hover);text-decoration:underline}
+.empty{text-align:center;padding:60px;color:var(--text-tertiary);font-size:14px}
+.mr-4{margin-right:4px}.mr-8{margin-right:8px}
+.file-link{padding:2px 8px;border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--text-secondary);text-decoration:none;display:inline-block}
+.file-link:hover{background:var(--primary-bg);border-color:var(--primary-border);color:var(--primary)}
+
+.action-cell{border-left:1px solid var(--divider);text-align:center;white-space:nowrap}
+</style>
+</head>
+<body>
+<header>
+ <div style="display:flex;align-items:center;gap:10px">
+  <a href="/" title="返回首页" style="color:rgba(255,255,255,0.45);text-decoration:none;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.45'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></a>
+  <h1><span class="icon">&#x1f6e1;</span>安全联锁屏蔽系统</h1>
+ </div>
+ <div class="header-actions">
+  <select id="versionSelect" class="version-select" onchange="changeVersion()"><option value="">全部版本</option></select>
+  <button class="header-btn" onclick="openVersionMgr()">管理版本</button>
+  <button class="header-btn" onclick="refreshAll()">刷新</button>
+ </div>
+</header>
+
+<div class="tabs">
+ <div class="tab active" data-tab="ledger" onclick="switchTab('ledger')">屏蔽台账 <span class="badge" id="ledgerBadge">0</span></div>
+ <div class="tab" data-tab="create" onclick="switchTab('create')">新建申请</div>
+ <div class="tab" data-tab="history" onclick="switchTab('history')">屏蔽历史</div>
+ <div class="tab" data-tab="items" onclick="switchTab('items')">MMDC/SHS清单</div>
+</div>
+
+<div class="container" id="app"></div>
+
+<div class="modal-bg hidden" id="completeModal">
+ <div class="modal"><h3>完成作业</h3>
+  <p id="completeMsg" style="margin-bottom:16px;font-size:13px;color:var(--text-secondary)"></p>
+  <div id="completeConflicts" style="margin-bottom:16px"></div>
+  <div class="form-group"><label>恢复人</label><input type="text" id="completeRestoredBy" value="系统" style="padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px"></div>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="closeCompleteModal()">取消</button><button class="btn btn-danger" id="btnConfirmComplete" onclick="confirmComplete()">确认完成</button></div>
+ </div>
+</div>
+
+<div class="modal-bg hidden" id="extendModal">
+ <div class="modal"><h3>延期恢复</h3>
+  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px" id="extendInfo"></p>
+  <div class="form-group" style="margin-bottom:8px"><label>新的预期恢复时间 *</label><input type="datetime-local" id="extendNewTime"></div>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="$('extendModal').classList.add('hidden')">取消</button><button class="btn btn-primary" id="btnConfirmExtend">确认延期</button></div>
+ </div>
+</div>
+
+<div class="modal-bg hidden" id="versionModal">
+ <div class="modal"><h3>版本管理</h3>
+  <div style="margin-bottom:12px;display:flex;gap:8px"><input type="text" id="newVersionName" style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px" placeholder="输入新版本名称"><button class="btn btn-primary btn-sm" onclick="addVersion()">新增</button></div>
+  <div style="max-height:300px;overflow-y:auto" id="versionList"></div>
+  <p style="font-size:12px;color:var(--text-tertiary);margin-top:12px">只能新增，不提供删除以防止误操作</p>
+  <div class="modal-actions"><button class="btn btn-outline" onclick="$('versionModal').classList.add('hidden')">关闭</button></div>
+ </div>
+</div>
+
+<script>
+var API='/api/shield',currentTab='ledger',currentVersion='',allItems=[],allVersions=[],ledgerData=[],historyData=[],completeAppId=null,completeDryRun=null,extendAppId=null;
+
+function $(id){return document.getElementById(id)}
+function qsa(sel){return document.querySelectorAll(sel)}
+function verParam(){return currentVersion?'?version='+encodeURIComponent(currentVersion):''}
+
+async function apiFetch(url,opts){
+ opts=opts||{};
+ var r=await fetch(url,opts);
+ if(!r.ok){var e=await r.json().catch(function(){return{error:'网络错误'}});throw new Error(e.error||e.detail||'请求失败')}
+ return r
+}
+
+function fmtDate(d){if(!d)return '-';return d.substring(5,7)+'/'+d.substring(8,10)+' '+d.substring(11,16)}
+function fmtFull(d){if(!d)return '-';return d.substring(0,16)}
+function es(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function isOverdue(t){if(!t)return false;return new Date(t).getTime()<Date.now()}
+function isAppr(t){if(!t)return false;var d=new Date(t).getTime()-Date.now();return d>0&&d<=864e5}
+
+/* ── Version ── */
+async function loadVersions(){
+ try{var r=await apiFetch(API+'/versions');allVersions=await r.json();var s=$('versionSelect');s.innerHTML='<option value="">全部版本</option>'+allVersions.map(function(v){return'<option value="'+es(v.name)+'">'+es(v.name)+'</option>'}).join('');s.value=currentVersion}catch(e){}
+}
+function changeVersion(){currentVersion=$('versionSelect').value;refreshAll()}
+
+/* ── Version management ── */
+window.openVersionMgr=function(){
+ $('versionModal').classList.remove('hidden');
+ renderVersionList()
+}
+function renderVersionList(){
+ var h='';
+ allVersions.forEach(function(v){h+='<div style="padding:8px 12px;margin:4px 0;background:var(--surface);border-radius:6px;display:flex;justify-content:space-between;align-items:center"><span>'+es(v.name)+'</span><span style="font-size:11px;color:var(--text-tertiary)">'+fmtDate(v.created_at)+'</span></div>'});
+ $('versionList').innerHTML=h||'<span style="color:var(--text-tertiary);font-size:13px">暂无版本</span>'
+}
+window.addVersion=async function(){
+ var n=$('newVersionName').value.trim();if(!n){alert('请输入版本名称');return}
+ try{await apiFetch(API+'/versions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});
+  $('newVersionName').value='';await loadVersions();renderVersionList()}catch(e){alert('新增失败：'+e.message)}
+}
+
+/* ── Tabs ── */
+function switchTab(tab){
+ currentTab=tab;
+ qsa('.tab').forEach(function(t){t.classList.toggle('active',t.dataset.tab===tab)});
+ renderTab()
+}
+async function refreshAll(){await Promise.all([loadVersions(),loadItems()]);renderTab()}
+function renderTab(){
+ if(currentTab==='ledger')renderLedgerTab();
+ else if(currentTab==='create')renderCreateTab();
+ else if(currentTab==='history')renderHistoryTab();
+ else if(currentTab==='items')renderItemsTab()
+}
+
+/* ── Load data ── */
+async function loadItems(){try{var r=await apiFetch(API+'/items'+verParam());allItems=await r.json()}catch(e){allItems=[]}}
+async function loadLedger(){try{var r=await apiFetch(API+'/ledger'+verParam());ledgerData=await r.json();$('ledgerBadge').textContent=ledgerData.length}catch(e){ledgerData=[];$('ledgerBadge').textContent='0'}}
+async function loadHistory(){try{var r=await apiFetch(API+'/history'+verParam());historyData=await r.json()}catch(e){historyData=[]}}
+
+/* ── File link helper ── */
+function fileLink(path,label){
+ if(!path)return '';
+ return '<a class="file-link" href="/uploads/'+path+'" target="_blank">'+label+'</a>'
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LEDGER TAB
+═══════════════════════════════════════════════════════════════ */
+async function renderLedgerTab(){
+ $('app').innerHTML='<div class="loading">加载中...</div>';
+ await loadLedger();
+ var od=0,ap=0,appSet={};
+ ledgerData.forEach(function(r){
+  if(isOverdue(r.expected_restore_time))od++;
+  else if(isAppr(r.expected_restore_time))ap++;
+  appSet[r.application_id]=true;
+ });
+ var appCount=Object.keys(appSet).length;
+
+ // Build groups with rowspan info
+ var groups=[],cur=null;
+ ledgerData.forEach(function(r){
+  if(!cur||cur.appId!==r.application_id){
+   cur={appId:r.application_id,rows:[r]}; groups.push(cur);
+  } else {cur.rows.push(r)}
+ });
+
+ var h='<div class="stats-grid">';
+ h+='<div class="stat-card"><div class="stat-value">'+appCount+'</div><div class="stat-label">活跃申请</div></div>';
+ h+='<div class="stat-card"><div class="stat-value">'+ledgerData.length+'</div><div class="stat-label">屏蔽项</div></div>';
+ if(od>0)h+='<div class="stat-card danger"><div class="stat-value">'+od+'</div><div class="stat-label">超时未恢复</div></div>';
+ if(ap>0)h+='<div class="stat-card warning"><div class="stat-value">'+ap+'</div><div class="stat-label">24h内临期</div></div>';
+ h+='</div>';
+ if(ap>0)h+='<div class="alert alert-warn">当前有 '+ap+' 条将在24小时内到期</div>';
+ if(od>0)h+='<div class="alert alert-error">当前有 '+od+' 条已超时未解除</div>';
+
+ h+='<div class="card"><div class="table-wrap"><table>';
+ h+='<thead><tr><th style="width:55px">#ID</th><th>联锁名称</th><th>类别</th><th>子系统</th><th>申请人</th><th>原因</th><th>预期恢复</th><th style="width:90px">文件</th><th style="width:185px">操作</th></tr></thead><tbody>';
+
+ if(!ledgerData.length){h+='<tr><td colspan="9" class="empty">暂无活跃屏蔽项</td></tr>';}
+ else {
+  groups.forEach(function(g){
+   g.rows.forEach(function(r,i){
+    var odr=isOverdue(r.expected_restore_time);
+    var apr=isAppr(r.expected_restore_time);
+    var cls=odr?'overdue':(apr?'approaching':'');
+    var lastRow=(i===g.rows.length-1);
+    if(!lastRow)cls+=' same-group';
+    else cls+=' group-end';
+
+    h+='<tr class="'+cls+'">';
+    h+='<td><span style="font-weight:600;color:var(--primary)">#'+r.application_id+'</span></td>';
+    h+='<td><strong>'+es(r.shield_item_name)+'</strong></td>';
+    h+='<td>'+es(r.shield_item_category)+'</td>';
+    h+='<td>'+es(r.shield_item_subsystem)+'</td>';
+    h+='<td>'+es(r.applicant)+'</td>';
+    h+='<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+es(r.reason)+'">'+es(r.reason)+'</td>';
+    h+='<td><span class="tag '+(odr?'tag-red':(apr?'tag-yellow':'tag-blue'))+'">'+fmtFull(r.expected_restore_time)+'</span></td>';
+    h+='<td>'+fileLink(r.meeting_minutes_path,'纪要')+' '+fileLink(r.shield_screenshot_path,'截图');
+    if(!r.meeting_minutes_path&&!r.shield_screenshot_path)h+='-';
+    h+='</td>';
+    // Actions with rowspan
+    if(i===0){
+     h+='<td class="action-cell" rowspan="'+g.rows.length+'">';
+     h+='<button class="btn btn-warn btn-xs mr-4" onclick="openExtend('+r.application_id+',\''+es(r.expected_restore_time)+'\',\''+es(r.applicant)+'\')">延期</button>';
+     h+='<button class="btn btn-danger btn-xs mr-4" onclick="openComplete('+r.application_id+')">完成</button>';
+     h+='<button class="btn btn-outline btn-xs" onclick="delApp('+r.application_id+')">删除</button>';
+     h+='</td>';
+    }
+    h+='</tr>';
+   });
+  });
+ }
+ h+='</tbody></table></div></div>';
+ $('app').innerHTML=h
+}
+
+/* ── Delete ── */
+window.delApp=async function(id){if(!confirm('确定删除申请 #'+id+' ？'))return;try{await apiFetch(API+'/applications/'+id,{method:'DELETE'});refreshAll()}catch(e){alert('删除失败：'+e.message)}}
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPLETE MODAL
+═══════════════════════════════════════════════════════════════ */
+window.openComplete=async function(id){
+ completeAppId=id;$('completeRestoredBy').value='系统';$('completeMsg').textContent='正在检查冲突...';$('completeConflicts').innerHTML='';$('completeModal').classList.remove('hidden');$('btnConfirmComplete').disabled=true;
+ try{
+  var r=await apiFetch(API+'/applications/'+id+'/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:true,restored_by:'系统'})});
+  completeDryRun=await r.json();
+  if(completeDryRun.can_complete){$('completeMsg').textContent='将恢复 '+completeDryRun.items.length+' 个屏蔽项，无冲突。';$('btnConfirmComplete').disabled=false}
+  else {$('completeMsg').textContent='有 '+completeDryRun.conflicts.length+' 个冲突，但仍可完成归档。';$('completeConflicts').innerHTML='<div class="alert alert-warn" style="margin-bottom:8px">冲突详情：</div>'+completeDryRun.conflicts.map(function(c){return'<div style="font-size:12px;padding:4px 0;color:var(--warn)">'+es(c.shield_item_name)+' 被申请 #'+c.conflict_application_id+' ('+es(c.applicant)+') 也占用</div>'}).join('');$('btnConfirmComplete').disabled=false}
+ }catch(e){$('completeMsg').textContent='检查失败：'+e.message}
+}
+window.closeCompleteModal=function(){$('completeModal').classList.add('hidden');completeAppId=null;completeDryRun=null}
+window.confirmComplete=async function(){if(!completeAppId)return;try{await apiFetch(API+'/applications/'+completeAppId+'/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restored_by:$('completeRestoredBy').value.trim(),dry_run:false})});alert('作业已完成归档!');closeCompleteModal();refreshAll()}catch(e){alert('完成失败：'+e.message)}}
+
+/* ═══════════════════════════════════════════════════════════════
+   EXTEND MODAL
+═══════════════════════════════════════════════════════════════ */
+window.openExtend=function(id,currentTime,applicant){
+ extendAppId=id;$('extendInfo').innerHTML='申请 <strong>#'+id+'</strong> ('+es(applicant)+')<br>当前预期恢复时间：'+fmtFull(currentTime);$('extendNewTime').value=(currentTime||'').substring(0,16);$('extendModal').classList.remove('hidden');$('btnConfirmExtend').onclick=function(){confirmExtend()}
+}
+window.confirmExtend=async function(){if(!extendAppId)return;var nt=$('extendNewTime').value;if(!nt){alert('请选择新的恢复时间');return};try{await apiFetch(API+'/applications/'+extendAppId+'/extend',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({expected_restore_time:nt+':00'})});alert('已延期!');$('extendModal').classList.add('hidden');refreshAll()}catch(e){alert('延期失败：'+e.message)}}
+
+/* ═══════════════════════════════════════════════════════════════
+   CREATE TAB
+═══════════════════════════════════════════════════════════════ */
+function renderCreateTab(){
+ var verInfo=currentVersion?'当前版本：<strong>'+es(currentVersion)+'</strong>':'<span style="color:var(--danger)">请先在顶部选择版本</span>';
+ var items=allItems.map(function(i){var sub=i.subsystem||'';return'<label data-search="'+(es(i.name+i.category+sub).toLowerCase())+'"><input type="checkbox" value="'+i.id+'">'+es(i.name)+' <span style="color:var(--text-tertiary);font-size:11px">'+(i.category||'-')+' / '+(sub||'-')+'</span></label>'}).join('');
+ if(!items)items='<span style="color:var(--text-tertiary);font-size:13px">当前版本暂无联锁项，请先在MMDC/SHS清单中导入</span>';
+ $('app').innerHTML='<div class="card"><div class="card-header"><h3>新建屏蔽申请</h3><span style="font-size:13px;color:var(--text-secondary)">'+verInfo+'</span></div><div class="card-body"><form onsubmit="return submitApp(event)"><div class="form-grid">'+
+  '<div class="form-group"><label>申请人 *</label><input type="text" id="crApplicant" required></div>'+
+  '<div class="form-group"><label>预期恢复时间 *</label><input type="datetime-local" id="crTime" required></div>'+
+  '<div class="form-group full"><label>屏蔽原因 *</label><textarea id="crReason" required></textarea></div>'+
+  '<div class="form-group"><label>会议纪要</label><input type="file" id="crMeeting" accept=".pdf,.png,.jpg,.jpeg"></div>'+
+  '<div class="form-group"><label>屏蔽截图</label><input type="file" id="crShot" accept=".png,.jpg,.jpeg"></div>'+
+  '<div class="form-group full"><label>选择屏蔽联锁项 *</label><input class="item-search-box" type="text" placeholder="搜索联锁项..." oninput="filterChecklist(this.value)"><div class="items-checklist" id="crItems">'+items+'</div></div>'+
+  '</div><div style="margin-top:20px"><button type="submit" class="btn btn-primary" '+(currentVersion?'':'disabled')+'>提交申请</button></div></form></div></div>'
+}
+window.filterChecklist=function(v){
+ var s=v.toLowerCase();
+ qsa('#crItems label').forEach(function(l){var t=l.dataset.search||'';l.classList.toggle('hidden',s&&t.indexOf(s)===-1)})
+}
+window.submitApp=async function(e){
+ e.preventDefault();
+ if(!currentVersion){alert('请先选择一个版本');return false}
+ var fd=new FormData();
+ fd.append('applicant',$('crApplicant').value.trim());
+ fd.append('reason',$('crReason').value.trim());
+ fd.append('expected_restore_time',$('crTime').value.replace('T',' ')+':00');
+ fd.append('version',currentVersion);
+ var ids=[];qsa('#crItems input:checked').forEach(function(cb){ids.push(parseInt(cb.value))});
+ if(!ids.length){alert('请至少选择一个屏蔽联锁项');return false}
+ fd.append('shield_item_ids',JSON.stringify(ids));
+ var mf=$('crMeeting').files[0];if(mf)fd.append('meeting_minutes',mf);
+ var sf=$('crShot').files[0];if(sf)fd.append('shield_screenshot',sf);
+ try{await apiFetch(API+'/applications',{method:'POST',body:fd});alert('申请提交成功!');switchTab('ledger')}catch(e){alert('提交失败：'+e.message)}
+ return false
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HISTORY TAB
+═══════════════════════════════════════════════════════════════ */
+async function renderHistoryTab(){
+ $('app').innerHTML='<div class="loading">加载中...</div>';
+ await loadHistory();
+ var h='<div class="card"><div class="table-wrap"><table>';
+ h+='<thead><tr><th>联锁名称</th><th>类别</th><th>子系统</th><th>申请人</th><th>原因</th><th>预期恢复</th><th>恢复时间</th><th>恢复人</th><th>文件</th><th>历史次数</th></tr></thead><tbody>';
+ if(!historyData.length){h+='<tr><td colspan="10" class="empty">暂无屏蔽历史</td></tr>';}
+ else {historyData.forEach(function(r){h+='<tr><td>'+es(r.shield_item_name)+'</td><td>'+es(r.shield_item_category)+'</td><td>'+es(r.shield_item_subsystem)+'</td><td>'+es(r.applicant)+'</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+es(r.reason)+'">'+es(r.reason)+'</td><td>'+fmtDate(r.expected_restore_time)+'</td><td>'+fmtDate(r.restored_at)+'</td><td>'+es(r.restored_by)+'</td><td>'+fileLink(r.meeting_minutes_path,'纪要')+' '+fileLink(r.shield_screenshot_path,'截图')+'</td><td><span class="tag tag-blue">'+(r.shield_count||1)+'次</span></td></tr>';});}
+ h+='</tbody></table></div></div>';
+ $('app').innerHTML=h
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ITEMS TAB (MMDC/SHS)
+═══════════════════════════════════════════════════════════════ */
+function renderItemsTab(){
+ var verInfo=currentVersion?'当前版本：<strong>'+es(currentVersion)+'</strong>':'<span style="color:var(--text-secondary)">全部版本</span>';
+ var h='<div class="stats-grid"><div class="stat-card"><div class="stat-value">'+allItems.length+'</div><div class="stat-label">联锁项总数</div></div></div>';
+ h+='<div class="card"><div class="card-header"><h3>MMDC/SHS 清单</h3><div style="display:flex;align-items:center;gap:12px"><span style="font-size:13px;color:var(--text-secondary)">'+verInfo+'</span><div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="downloadTemplate()">下载模板</button><button class="btn btn-outline btn-sm" onclick="openImportExcel()" '+(currentVersion?'':'disabled')+'>批量导入</button><button class="btn btn-primary btn-sm" onclick="openAddItem()" '+(currentVersion?'':'disabled')+'>新增</button></div></div></div>';
+ h+='<div class="table-wrap"><table><thead><tr><th>ID</th><th>名称</th><th>类别</th><th>子系统</th><th>操作</th></tr></thead><tbody>';
+ if(!allItems.length){h+='<tr><td colspan="5" class="empty">'+(currentVersion?'当前版本暂无联锁项，请导入':'暂无联锁项')+'</td></tr>';}
+ else {allItems.forEach(function(item){h+='<tr><td>'+item.id+'</td><td>'+es(item.name)+'</td><td>'+es(item.category)+'</td><td>'+es(item.subsystem)+'</td><td><button class="btn btn-outline btn-xs mr-8" onclick="editItem('+item.id+')">编辑</button><button class="btn btn-danger btn-xs" onclick="delItem('+item.id+')">删除</button></td></tr>';});}
+ h+='</tbody></table></div></div>';
+ $('app').innerHTML=h
+}
+
+function showModal(title,bodyHtml,onSave){
+ var html='<div class="modal-bg" id="itemModal"><div class="modal"><h3>'+title+'</h3>'+bodyHtml+'<div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" id="modalSaveBtn">保存</button></div></div></div>';
+ $('app').insertAdjacentHTML('beforeend',html);$('modalSaveBtn').onclick=function(){onSave();closeModal()}
+}
+function closeModal(){var m=$('itemModal');if(m)m.remove()}
+
+window.openAddItem=function(){
+ if(!currentVersion){alert('请先选择一个版本');return}
+ showModal('新增联锁项（'+currentVersion+'）','<div class="form-grid"><div class="form-group full"><label>名称 *</label><input type="text" id="mdlName"></div><div class="form-group"><label>类别</label><input type="text" id="mdlCat"></div><div class="form-group"><label>子系统</label><input type="text" id="mdlSub"></div></div>',async function(){var n=$('mdlName').value.trim();if(!n){alert('名称不能为空');return};await apiFetch(API+'/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,category:$('mdlCat').value,subsystem:$('mdlSub').value,version:currentVersion})});await loadItems();renderItemsTab()})
+}
+window.editItem=function(id){
+ var item=allItems.find(function(i){return i.id===id});if(!item)return;
+ showModal('编辑联锁项','<div class="form-grid"><div class="form-group full"><label>名称 *</label><input type="text" id="mdlName" value="'+es(item.name)+'"></div><div class="form-group"><label>类别</label><input type="text" id="mdlCat" value="'+es(item.category||'')+'"></div><div class="form-group"><label>子系统</label><input type="text" id="mdlSub" value="'+es(item.subsystem||'')+'"></div></div>',async function(){var n=$('mdlName').value.trim();if(!n){alert('名称不能为空');return};await apiFetch(API+'/items/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,category:$('mdlCat').value,subsystem:$('mdlSub').value})});await loadItems();renderItemsTab()})
+}
+window.delItem=async function(id){if(!confirm('确定删除此联锁项？'))return;try{await apiFetch(API+'/items/'+id,{method:'DELETE'});await loadItems();renderItemsTab()}catch(e){alert('删除失败：'+e.message)}}
+
+/* ── Download Excel Template ── */
+window.downloadTemplate=function(){
+ var ws=XLSX.utils.json_to_sheet([{名称:'汽包水位高高联锁',类别:'锅炉保护',子系统:''},{名称:'一次风机全停联锁',类别:'MFT',子系统:''}]);
+ var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'联锁项');
+ var now=new Date();XLSX.writeFile(wb,'MMDC_SHS_导入模板.xlsx')
+}
+
+/* ── Excel Import ── */
+window.openImportExcel=function(){
+ if(!currentVersion){alert('请先选择一个版本');return}
+ showModal('批量导入联锁项（'+currentVersion+'）',
+  '<p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">请先下载模板，按格式填写后上传 Excel 文件</p><div class="form-group"><input type="file" id="mdlExcelFile" accept=".xlsx,.xls" style="padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px"></div><div id="mdlPreview" style="margin-top:8px;font-size:12px;color:var(--text-secondary)"></div>',
+  async function(){
+   var f=$('mdlExcelFile').files[0];if(!f){alert('请选择文件');return}
+   var arr=await f.arrayBuffer();
+   var wb=XLSX.read(arr,{type:'array'});
+   var ws=wb.Sheets[wb.SheetNames[0]];
+   var rows=XLSX.utils.sheet_to_json(ws,{header:1});
+   if(rows.length<2){alert('文件中没有有效数据');return}
+   var headers=rows[0];
+   var nameIdx=0,catIdx=1,subIdx=2;
+   var items=[];
+   for(var i=1;i<rows.length;i++){
+    var r=rows[i];
+    var name=r[nameIdx]?String(r[nameIdx]).trim():'';
+    if(!name)continue;
+    items.push({name:name,category:String(r[catIdx]||'').trim(),subsystem:String(r[subIdx]||'').trim()})
+   }
+   if(!items.length){alert('未解析到有效数据');return}
+   var resp=await apiFetch(API+'/items/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:items,version:currentVersion})});
+   var d=await resp.json();alert('成功导入 '+d.imported+' 个联锁项');
+   await loadItems();renderItemsTab()
+  })
+}
+
+/* ── Init ── */
+async function init(){await Promise.all([loadVersions(),loadItems()]);renderLedgerTab()}
+init();
+</script>
+</body>
 </html>

@@ -2,7 +2,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends, UploadFile, File
 from ehs_equipment.models import SessionLocal, EquipmentRecord
 from ehs_equipment.api.auth import get_current_user, require_admin
-from ehs_equipment.models import log_audit
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone
@@ -118,9 +117,7 @@ def create_equipment(data: dict, user=Depends(get_current_user)):
         db.add(item)
         db.commit()
         db.refresh(item)
-        result = item.to_dict()
-        log_audit(user, "create", "equipment", target_id=result.get("id"), target_name=result.get("equipment_no"), after=result)
-        return result
+        return item.to_dict()
     except Exception as e:
         db.rollback()
         raise HTTPException(400, str(e))
@@ -136,8 +133,6 @@ def update_equipment(equipment_id: int, data: dict, user=Depends(require_admin))
         if not item:
             raise HTTPException(404)
 
-        before = item.to_dict()
-
         for k, v in data.items():
             if k in EquipmentRecord.__table__.columns.keys() and k != "id":
                 setattr(item, k, v)
@@ -150,9 +145,7 @@ def update_equipment(equipment_id: int, data: dict, user=Depends(require_admin))
                 pass
 
         db.commit()
-        result = item.to_dict()
-        log_audit(user, "update", "equipment", target_id=equipment_id, target_name=result.get("equipment_no"), before=before, after=result)
-        return result
+        return item.to_dict()
     finally:
         db.close()
 
@@ -164,7 +157,6 @@ def delete_equipment(equipment_id: int, user=Depends(require_admin)):
         item = db.query(EquipmentRecord).get(equipment_id)
         if not item:
             raise HTTPException(404)
-        before = item.to_dict()
         # 删除关联图片
         if item.cert_photo:
             try:
@@ -175,7 +167,6 @@ def delete_equipment(equipment_id: int, user=Depends(require_admin)):
                 pass
         db.delete(item)
         db.commit()
-        log_audit(user, "delete", "equipment", target_id=equipment_id, target_name=before.get("equipment_no"), before=before)
         return {"ok": True}
     finally:
         db.close()
@@ -191,8 +182,92 @@ def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
     try:
         with open(filepath, "wb") as f:
             f.write(file.file.read())
-        url = f"/uploads/equipment/{filename}"
-        log_audit(user, "upload", "equipment", target_name=filename, detail=f"上传证照: {file.filename}")
-        return {"url": url, "filename": filename}
+        return {"url": f"/uploads/equipment/{filename}", "filename": filename}
     except Exception as e:
         raise HTTPException(400, f"上传失败: {str(e)}")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  Batch Operations
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/batch/check-date")
+def batch_update_check_date(data: dict, admin=Depends(require_admin)):
+    """批量刷新校验日期（自动计算下次校验日期）"""
+    ids = data.get("ids", [])
+    last_check_date = data.get("last_check_date", "")
+    if not ids or not last_check_date:
+        raise HTTPException(400, "缺少设备ID或校验日期")
+
+    db = SessionLocal()
+    try:
+        updated = 0
+        for item in db.query(EquipmentRecord).filter(EquipmentRecord.id.in_(ids)).all():
+            item.last_check_date = last_check_date
+            if item.check_cycle:
+                try:
+                    item.next_check_date = _calc_next_check_date(last_check_date, int(item.check_cycle))
+                except Exception:
+                    pass
+            updated += 1
+        db.commit()
+        return {"updated": updated}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400, str(e))
+    finally:
+        db.close()
+
+
+@router.post("/batch/status")
+def batch_update_status(data: dict, admin=Depends(require_admin)):
+    """批量修改设备状态（停用/报废/在用）"""
+    ids = data.get("ids", [])
+    status = data.get("status", "")
+    if not ids or not status:
+        raise HTTPException(400, "缺少设备ID或状态")
+    if status not in ("在用", "停用", "报废"):
+        raise HTTPException(400, "状态必须是在用/停用/报废")
+
+    db = SessionLocal()
+    try:
+        updated = db.query(EquipmentRecord).filter(EquipmentRecord.id.in_(ids)).update(
+            {EquipmentRecord.status: status}, synchronize_session=False
+        )
+        db.commit()
+        return {"updated": updated}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400, str(e))
+    finally:
+        db.close()
+
+
+@router.post("/batch/delete")
+def batch_delete(data: dict, admin=Depends(require_admin)):
+    """批量删除设备"""
+    ids = data.get("ids", [])
+    if not ids:
+        raise HTTPException(400, "缺少设备ID")
+
+    db = SessionLocal()
+    try:
+        items = db.query(EquipmentRecord).filter(EquipmentRecord.id.in_(ids)).all()
+        deleted = 0
+        for item in items:
+            if item.cert_photo:
+                try:
+                    photo_path = os.path.join(UPLOADS_DIR, os.path.basename(item.cert_photo))
+                    if os.path.exists(photo_path):
+                        os.remove(photo_path)
+                except Exception:
+                    pass
+            db.delete(item)
+            deleted += 1
+        db.commit()
+        return {"deleted": deleted}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(400, str(e))
+    finally:
+        db.close()

@@ -677,13 +677,7 @@ td.cell-desc{max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:
  <div class="dialog">
  <h3>字段选项管理</h3>
  <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">管理各字段的下拉选项，新增的选项会自动应用到表单和筛选器。</p>
- <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
- <select id="opt-field" class="filter-select"></select>
- <input type="text" id="opt-new-value" placeholder="新选项值" class="filter-input" style="flex:1" onkeyup="if(event.key==='Enter')addOption()">
- <button class="btn btn-primary btn-sm" onclick="addOption()">＋ 添加</button>
- </div>
- <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
- <div id="opt-list"></div>
+ <div id="options-content"></div>
  <div style="text-align:right;margin-top:16px">
  <button class="btn btn-outline btn-sm" onclick="closeOptionsManager()">关闭</button>
  </div>
@@ -900,18 +894,9 @@ async function loadOptions() {
   document.getElementById('filter-version').innerHTML = '<option value="">全部版本</option>'; populateSel('filter-version','version');
 
  // 选项管理编辑器
- const of = document.getElementById('opt-field');
- const labels = {
- lab:'实验室',floor:'楼层',subsystem:'子系统',risk_level:'风险等级',
- risk_type:'风险类型',check_type:'检查类型',equipment:'相关设备',
- equipment_phase:'设备阶段',status:'状态',need_issue:'需要提问题单',
- need_sde:'SDE闭环'
- };
- let builtin = Object.keys(labels);
- Object.keys(allOptions).forEach(k => { if (!builtin.includes(k)) builtin.push(k); });
- of.innerHTML = builtin.map(k => `<option value="${k}">${labels[k] || k}</option>`).join('');
- of.onchange = () => renderOptionsList();
- if (builtin.length) renderOptionsList();
+ if (document.getElementById('options-dialog') && !document.getElementById('options-dialog').classList.contains('hidden')) {
+  renderOptionsManager();
+ }
 }
 
 function getFieldValue(fieldName) {
@@ -935,27 +920,46 @@ function otherChanged(sel) {
 // ═══════════════════════════════════════════════════
 // 选项管理
 // ═══════════════════════════════════════════════════
-function renderOptionsList() {
- const fn = document.getElementById('opt-field').value;
- const vals = allOptions[fn] || [];
- const container = document.getElementById('opt-list');
- container.innerHTML =
- `<div class="opt-section"><h4>${fn}</h4><div class="opt-tags">${vals.length ?
- vals.map((v, i) => `<span class="opt-tag">${v}<span class="del" onclick="delOption('${fn}','${v}')">✕</span></span>`).join('') :
- '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>'}</div></div>`;
+function renderOptionsManager() {
+ const container = document.getElementById('options-content');
+ const labels = {
+  lab:'实验室',floor:'楼层',subsystem:'子系统',risk_level:'风险等级',
+  risk_type:'风险类型',check_type:'检查类型',equipment:'相关设备',
+  equipment_phase:'设备阶段',status:'状态',need_issue:'需要提问题单',
+  need_sde:'SDE闭环'
+ };
+ let builtin = Object.keys(labels);
+ Object.keys(allOptions).forEach(k => { if (!builtin.includes(k)) builtin.push(k); });
+
+ let html = '';
+ builtin.forEach(fn => {
+  const vals = allOptions[fn] || [];
+  html += `<div class="opt-section">
+   <h4>${labels[fn] || fn}</h4>
+   <div class="opt-tags">${vals.length ?
+    vals.map(v => `<span class="opt-tag">${v}<span class="del" onclick="delOption('${fn}','${v}')">✕</span></span>`).join('') :
+    '<span style="font-size:13px;color:var(--text-secondary)">暂无选项</span>'}
+   </div>
+   <div class="opt-add">
+    <input type="text" id="opt-add-${fn}" placeholder="新增选项" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px">
+    <button class="btn btn-primary btn-xs" onclick="addOption('${fn}')">添加</button>
+   </div>
+  </div>`;
+ });
+ container.innerHTML = html;
 }
 
-async function addOption() {
- const fn = document.getElementById('opt-field').value;
- const v = document.getElementById('opt-new-value').value.trim();
- if (!fn || !v) return;
+async function addOption(fieldName) {
+ const input = document.getElementById('opt-add-' + fieldName);
+ const v = input.value.trim();
+ if (!v) return;
  const r = await apiFetch(API + '/options', {
- method: 'POST',
- headers: {'Content-Type': 'application/json'},
- body: JSON.stringify({field_name: fn, value: v})
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({field_name: fieldName, value: v})
  });
  if (!r.ok) { showToast('添加失败', true); return; }
- document.getElementById('opt-new-value').value = '';
+ input.value = '';
  await loadOptions();
 }
 
@@ -964,8 +968,8 @@ async function delOption(field, value) {
  const opts = await r.json();
  const found = opts.find(o => o.value === value);
  if (found) {
- const dr = await apiFetch(API + '/options/' + found.id, {method: 'DELETE'});
- if (!dr.ok) { showToast('删除失败', true); return; }
+  const dr = await apiFetch(API + '/options/' + found.id, {method: 'DELETE'});
+  if (!dr.ok) { showToast('删除失败', true); return; }
  }
  await loadOptions();
 }
@@ -1042,6 +1046,7 @@ async function deleteUser(id, username) {
 
 function openOptionsManager() {
  document.getElementById('options-dialog').classList.remove('hidden');
+ renderOptionsManager();
 }
 function closeOptionsManager() {
  document.getElementById('options-dialog').classList.add('hidden');
